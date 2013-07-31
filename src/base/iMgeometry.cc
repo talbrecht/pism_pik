@@ -370,7 +370,7 @@ void IceModel::cell_interface_fluxes(bool dirichlet_bc,
     // The Dirichlet B.C. case:
     if (dirichlet_bc) {
 
-      if (bc_mask.ij == 1 && bc_mask[direction] == 1) {
+      if (bc_mask.ij > 0 && bc_mask[direction] > 0) {
 
         // Case 1: both sides of the interface are B.C. locations: average from
         // the regular grid onto the staggered grid.
@@ -379,7 +379,7 @@ void IceModel::cell_interface_fluxes(bool dirichlet_bc,
         else
           out_SSA_velocity[direction] = 0.5 * (bc_velocity.ij.v + bc_velocity[direction].v);
 
-      } else if (bc_mask.ij == 1 && bc_mask[direction] == 0) {
+      } else if (bc_mask.ij > 0 && bc_mask[direction] == 0) {
 
         // Case 2: at a Dirichlet B.C. location
         if (direction == East || direction == West)
@@ -387,13 +387,19 @@ void IceModel::cell_interface_fluxes(bool dirichlet_bc,
         else                    // North or South
           out_SSA_velocity[direction] = bc_velocity.ij.v;
 
-      } else if (bc_mask.ij == 0 && bc_mask[direction] == 1) {
+        // no SIA flux over boundary
+	//out_SIA_flux[direction] = 0.;
+
+      } else if (bc_mask.ij == 0 && bc_mask[direction] > 0) {
 
         // Case 3: next to a Dirichlet B.C. location
         if (direction == East || direction == West)
           out_SSA_velocity[direction] = bc_velocity[direction].u;
         else                  // North or South
           out_SSA_velocity[direction] = bc_velocity[direction].v;
+
+        // no SIA flux over boundary
+        //out_SIA_flux[direction] = 0.;
 
       } else {
         // Case 4: elsewhere.
@@ -715,13 +721,15 @@ PetscErrorCode IceModel::massContExplicitStep() {
       } // end of "if (ice_free_ocean)"
 
       // Dirichlet BC case (should go last to override previous settings):
-      if (dirichlet_bc && vBCMask.as_int(i,j) == 1) {
+      if (dirichlet_bc && vBCMask.as_int(i,j) > 0) {
         surface_mass_balance = 0.0;
         meltrate_grounded    = 0.0;
         meltrate_floating    = 0.0;
         Href_to_H_flux       = 0.0;
-        divQ_SIA             = 0.0;
         divQ_SSA             = 0.0;
+	// when vBCMask > 1, allow boundary thickness to adjust to sia flux
+        // standard case for boundary is vBCMask==1
+        if (vBCMask.as_int(i,j) == 1) divQ_SIA = 0.0;
       }
 
       if (compute_flux_divergence == true) {
