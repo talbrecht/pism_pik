@@ -70,7 +70,6 @@ public:
     if (Model::input_model != NULL) {
       ierr = Model::input_model->define_variables(vars, nc, nctype); CHKERRQ(ierr);
     }
-
     return 0;
   }
 
@@ -96,6 +95,8 @@ public:
   }
 
 protected:
+
+
   std::map<std::string, IceModelVec2T*> m_fields;
   std::string filename, option_prefix;
 
@@ -106,6 +107,7 @@ protected:
   {
     PetscErrorCode ierr;
     bool bc_file_set, bc_period_set, bc_ref_year_set;
+
 
     int bc_period_years = 0,
       bc_reference_year = 0;
@@ -128,6 +130,9 @@ protected:
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (bc_file_set == false) {
+
+
+
       // find PISM input file to read data from:
       bool do_regrid; int start;   // will be ignored
       ierr = Model::find_pism_input(filename, do_regrid, start); CHKERRQ(ierr);
@@ -177,6 +182,7 @@ protected:
       // to keep all available records in memory.
       if (bc_period == 0)
         n_records = PetscMin(n_records, buffer_size);
+
 
       if (n_records < 1) {
         PetscPrintf(Model::grid.com, "PISM ERROR: Can't find '%s' (%s) in %s.\n",

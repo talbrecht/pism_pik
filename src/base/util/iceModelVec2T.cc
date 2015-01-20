@@ -136,7 +136,7 @@ PetscErrorCode IceModelVec2T::init(std::string fname, unsigned int period, doubl
   ierr = nc.inq_var(m_metadata[0].get_name(), m_metadata[0].get_string("standard_name"),
                     exists, name_found, found_by_standard_name); CHKERRQ(ierr);
   if (exists == false) {
-    PetscPrintf(grid->com, "PISM ERROR: can't find %s (%s) in %s.\n",
+    PetscPrintf(grid->com, "PISM ERROR 2t: can't find %s (%s) in %s.\n",
                 m_metadata[0].get_string("long_name").c_str(), m_metadata[0].get_name().c_str(),
                 filename.c_str());
     PISMEnd();

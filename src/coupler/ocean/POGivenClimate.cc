@@ -81,6 +81,7 @@ PetscErrorCode POGiven::init(PISMVars &) {
   }
 
   return 0;
+
 }
 
 PetscErrorCode POGiven::update(double my_t, double my_dt) {

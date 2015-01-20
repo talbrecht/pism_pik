@@ -316,6 +316,14 @@ netcdf pism_config {
     pism_config:thickness_calving_threshold = 50.0;
     pism_config:thickness_calving_threshold_doc = "m; When terminal ice thickness of floating ice shelf is less than this threshold, it will be calved off.";
 
+    pism_config:ref_openocean_shelfthk = 300.0;
+    pism_config:ref_openocean_shelfthk_doc = "m; Reference thickness of ice shelf in area which initially is open ocean.";
+
+    pism_config:meltrate_increase_per_K = 10.0;
+    pism_config:meltrate_increase_per_K_doc = "m/(year*K); Increase of the meltrate per degree K. from Rignot and Jacobs, Science 2002.";
+
+
+
 
     // for next constants, note (VELOCITY/LENGTH)^2  is very close to 10^-27; compare "\epsilon^2/L^2" which
     // appears in formula (4.1) in C. Schoof 2006 "A variational approach to ice streams" J Fluid Mech 556 pp 227--251
