@@ -44,10 +44,27 @@ public:
   virtual PetscErrorCode define_variables(std::set<std::string> vars, const PIO &nc,PISM_IO_Type nctype);
   virtual PetscErrorCode write_variables(std::set<std::string> vars, const PIO &nc);
 
+  class POGivenBMRConstants {
+  public:
+    POGivenBMRConstants(const PISMConfig &config);
+
+    double c[3];
+
+    double T0_water;
+    double sea_water_density;
+    double ice_density;
+    double standard_gravity;
+    double secpera;
+    double beta_CC;
+    double beta_CC_grad;
+
+  };
+
 
 protected:
   IceModelVec2S *ice_thickness, melt_ref_thk;
   NCSpatialVariable shelfbtemp;
+  //IceModelVec2S shelfbtemp;
   IceModelVec2T *shelfbmassflux;
 
 
