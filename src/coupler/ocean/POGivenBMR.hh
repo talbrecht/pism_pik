@@ -19,12 +19,10 @@
 #ifndef _POGIVENBMR_H_
 #define _POGIVENBMR_H_
 
-//#include "PGivenBMR.hh"
+
 #include "PGivenClimate.hh"
 #include "POModifier.hh"
-//#include "NCVariable.hh"
 
-//class POGivenBMR : public PGivenBMR<POModifier,PISMOceanModel>
 class POGivenBMR : public PGivenClimate<POModifier,PISMOceanModel>
 {
 public:
@@ -36,27 +34,21 @@ public:
   virtual PetscErrorCode init(PISMVars &vars);
   virtual PetscErrorCode update(double my_t, double my_dt);
 
-  virtual PetscErrorCode sea_level_elevation(double &result) {
-    result = sea_level;
-    return 0;
-  }
-
+  virtual PetscErrorCode sea_level_elevation(double &result);
   virtual PetscErrorCode shelf_base_temperature(IceModelVec2S &result);
-
   virtual PetscErrorCode shelf_base_mass_flux(IceModelVec2S &result);
+  virtual PetscErrorCode melange_back_pressure_fraction(IceModelVec2S &result);
+
 
   virtual void add_vars_to_output(std::string keyword, std::set<std::string> &result);
-
   virtual PetscErrorCode define_variables(std::set<std::string> vars, const PIO &nc,PISM_IO_Type nctype);
-
   virtual PetscErrorCode write_variables(std::set<std::string> vars, const PIO &nc);
 
 
 protected:
   IceModelVec2S *ice_thickness, melt_ref_thk;
-  NCSpatialVariable shelfbtemp, shelfbmassflux;
-  //IceModelVec2T *shelfbtemp, *shelfbmassflux;
-  //IceModelVec2T *shelfbmassflux;
+  NCSpatialVariable shelfbtemp;
+  IceModelVec2T *shelfbmassflux;
 
 
 private:
