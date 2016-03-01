@@ -105,10 +105,11 @@ PetscErrorCode POGivenBMR::init(PISMVars &vars) {
   ice_thickness = dynamic_cast<IceModelVec2S*>(vars.get("land_ice_thickness"));
   if (!ice_thickness) { SETERRQ(grid.com, 1, "ERROR: ice thickness is not available"); }
 
+  // FIXME: update does not work, commented version runs
   // read time-independent data right away:
-  if (shelfbmassflux->get_n_records() == 1) {
-    ierr = update(grid.time->current(), 0); CHKERRQ(ierr); // dt is irrelevant
-  }
+  // if (shelfbmassflux->get_n_records() == 1) {
+  //   ierr = update(grid.time->current(), 0); CHKERRQ(ierr); // dt is irrelevant
+  // }
 
   ierr = verbPrintf(2, grid.com,"* Sub-shelf mass flux will be adjusted according to reference ice shelf base elevation"); CHKERRQ(ierr); 
 
