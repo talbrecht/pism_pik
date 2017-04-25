@@ -153,6 +153,7 @@ add_library (pism
   base/calving/EigenCalving.cc
   base/calving/CalvingFrontRetreat.cc
   base/calving/vonMisesCalving.cc
+  base/calving/FractureCalving.cc
   base/calving/FrontalMelt.cc
   base/part_grid_threshold_thickness.cc
   $<TARGET_OBJECTS:pismflowlaws>

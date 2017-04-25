@@ -69,6 +69,7 @@ class Hydrology;
 namespace calving {
 class EigenCalving;
 class vonMisesCalving;
+class FractureCalving;
 class OceanKill;
 class FloatKill;
 class CalvingAtThickness;
@@ -229,6 +230,7 @@ protected:
   calving::CalvingAtThickness *m_thickness_threshold_calving;
   calving::EigenCalving       *m_eigen_calving;
   calving::vonMisesCalving    *m_vonmises_calving;
+  calving::FractureCalving    *m_fracture_calving;
   FrontalMelt                 *m_frontal_melt;
 
   surface::SurfaceModel *m_surface;

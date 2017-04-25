@@ -20,6 +20,7 @@
 #include "base/calving/CalvingAtThickness.hh"
 #include "base/calving/EigenCalving.hh"
 #include "base/calving/vonMisesCalving.hh"
+#include "base/calving/FractureCalving.hh"
 #include "base/calving/FrontalMelt.hh"
 #include "base/calving/FloatKill.hh"
 #include "base/calving/IcebergRemover.hh"
@@ -72,6 +73,16 @@ void IceModel::do_calving() {
 
   if (m_vonmises_calving != NULL) {
     m_vonmises_calving->update(m_dt,
+                               m_ocean->sea_level_elevation(),
+                               m_ssa_dirichlet_bc_mask,
+                               m_beddef->bed_elevation(),
+                               m_cell_type,
+                               m_Href,
+                               m_ice_thickness);
+  }
+
+  if (m_fracture_calving != NULL) {
+    m_fracture_calving->update(m_dt,
                                m_ocean->sea_level_elevation(),
                                m_ssa_dirichlet_bc_mask,
                                m_beddef->bed_elevation(),

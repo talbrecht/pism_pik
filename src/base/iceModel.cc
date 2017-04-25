@@ -29,6 +29,7 @@
 #include "base/calving/CalvingAtThickness.hh"
 #include "base/calving/EigenCalving.hh"
 #include "base/calving/vonMisesCalving.hh"
+#include "base/calving/FractureCalving.hh"
 #include "base/calving/FloatKill.hh"
 #include "base/calving/IcebergRemover.hh"
 #include "base/calving/OceanKill.hh"
@@ -232,6 +233,7 @@ IceModel::IceModel(IceGrid::Ptr g, Context::Ptr context)
   m_thickness_threshold_calving = NULL;
   m_eigen_calving               = NULL;
   m_vonmises_calving            = NULL;
+  m_fracture_calving            = NULL;
   m_frontal_melt                = NULL;
 
   m_output_global_attributes.set_string("Conventions", "CF-1.5");
@@ -312,6 +314,7 @@ IceModel::~IceModel() {
   delete m_thickness_threshold_calving;
   delete m_eigen_calving;
   delete m_vonmises_calving;
+  delete m_fracture_calving;
   delete m_frontal_melt;
 }
 

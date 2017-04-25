@@ -26,6 +26,7 @@
 #include "base/calving/CalvingAtThickness.hh"
 #include "base/calving/EigenCalving.hh"
 #include "base/calving/vonMisesCalving.hh"
+#include "base/calving/FractureCalving.hh"
 #include "base/calving/FloatKill.hh"
 #include "base/calving/IcebergRemover.hh"
 #include "base/calving/OceanKill.hh"
@@ -839,6 +840,18 @@ void IceModel::init_calving() {
     methods.erase("vonmises_calving");
 
     m_submodels["von Mises calving"] = m_vonmises_calving;
+  }
+
+  if (methods.find("fracture_calving") != methods.end()) {
+
+    if (m_fracture_calving == NULL) {
+      m_fracture_calving = new calving::FractureCalving(m_grid, m_stress_balance);
+    }
+
+    m_fracture_calving->init();
+    methods.erase("fracture_calving");
+
+    m_submodels["Fracture calving"] = m_fracture_calving;
   }
 
   if (methods.find("frontal_melt") != methods.end()) {
