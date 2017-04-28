@@ -27,6 +27,7 @@
 #include "base/stressbalance/ShallowStressBalance.hh"
 #include "base/util/PISMVars.hh"
 #include "base/rheology/FlowLaw.hh"
+#include "base/util/pism_options.hh"
 
 namespace pism {
 namespace calving {
@@ -35,7 +36,7 @@ FractureCalving::FractureCalving(IceGrid::ConstPtr g,
                            stressbalance::StressBalance *stress_balance)
   : StressCalving(g, stress_balance, 2) {
 
-  m_sigma_max = m_config->get_double("calving.vonmises.sigma_max");
+  m_K = m_config->get_double("calving.eigen_calving.K");
 }
 
 FractureCalving::~FractureCalving() {
@@ -47,12 +48,12 @@ void FractureCalving::init() {
   m_log->message(2,
                  "* Initializing the 'Fracture calving' mechanism...\n");
 
-  //if (fabs(m_grid->dx() - m_grid->dy()) / std::min(m_grid->dx(), m_grid->dy()) > 1e-2) {
-  //  throw RuntimeError::formatted(PISM_ERROR_LOCATION, "-calving vonmises_calving using a non-square grid cell is not implemented (yet);\n"
-  //                                "dx = %f, dy = %f, relative difference = %f",
-  //                                m_grid->dx(), m_grid->dy(),
-  //                                fabs(m_grid->dx() - m_grid->dy()) / std::max(m_grid->dx(), m_grid->dy()));
-  //}
+  if (fabs(m_grid->dx() - m_grid->dy()) / std::min(m_grid->dx(), m_grid->dy()) > 1e-2) {
+    throw RuntimeError::formatted(PISM_ERROR_LOCATION, "-calving fracture_calving using a non-square grid cell is not implemented (yet);\n"
+                                  "dx = %f, dy = %f, relative difference = %f",
+                                  m_grid->dx(), m_grid->dy(),
+                                  fabs(m_grid->dx() - m_grid->dy()) / std::max(m_grid->dx(), m_grid->dy()));
+  }
 
   m_strain_rates.set(0.0);
 
@@ -63,27 +64,25 @@ void FractureCalving::init() {
   See equation (26) in [\ref Winkelmannetal2011].
 */
 void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
-                                           IceModelVec2S &result) const {
+                                          IceModelVec2S &result) const {
 
   using std::max;
 
   // Distance (grid cells) from calving front where strain rate is evaluated
   int offset = m_stencil_width;
 
+  const double eigenCalvOffset = 0.0;
+
+  double m_Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
+
+  double m_Fnew = options::Real("-fracture_calving_K","Fracturecalving constant",0.0);
+
   update_strain_rates();
 
-  const IceModelVec2V &ssa_velocity  = m_stress_balance->advective_velocity();
-  const IceModelVec3  *enthalpy      = m_grid->variables().get_3d_scalar("enthalpy");
-  const IceModelVec2S &ice_thickness = *m_grid->variables().get_2d_scalar("land_ice_thickness");
+  const IceModelVec2S &D = *m_grid->variables().get_2d_cell_type("fracture_density");
 
-  IceModelVec::AccessList list{enthalpy, &ice_thickness, &mask, &ssa_velocity,
-      &m_strain_rates, &result};
+  IceModelVec::AccessList list{&mask, &result, &m_strain_rates, &D};
 
-  const double *z = &m_grid->z()[0];
-  const rheology::FlowLaw*
-    flow_law = m_stress_balance->shallow()->flow_law();
-
-  const double ssa_n = flow_law->exponent();
 
   for (Points pt(*m_grid); pt; pt.next()) {
     const int i = pt.i(), j = pt.j();
@@ -92,62 +91,63 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
     // have floating ice neighbors after the mass continuity step
     if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
 
-      double
-        velocity_magnitude = 0.0,
-        hardness           = 0.0;
       // Average of strain-rate eigenvalues in adjacent floating grid cells.
       double
         eigen1             = 0.0,
-        eigen2             = 0.0;
+        eigen2             = 0.0,
+        fdens              = 0.0;
       {
         int N = 0;
         for (int p = -1; p < 2; p += 2) {
           const int I = i + p * offset;
-          if (mask.icy(I, j)) {
-            velocity_magnitude += ssa_velocity(I, j).magnitude();
-            {
-              double H = ice_thickness(I, j);
-              unsigned int k = m_grid->kBelowHeight(H);
-              hardness += averaged_hardness(*flow_law, H, k, &z[0], enthalpy->get_column(I, j));
+
+            if (mask.floating_ice(I, j) and not mask.ice_margin(I, j)) {
+              eigen1 += m_strain_rates(I, j, 0);
+              eigen2 += m_strain_rates(I, j, 1);
+              fdens  += D(I, j);
+              N += 1;
             }
-            eigen1 += m_strain_rates(I, j, 0);
-            eigen2 += m_strain_rates(I, j, 1);
-            N += 1;
-          }
+
         }
 
         for (int q = -1; q < 2; q += 2) {
           const int J = j + q * offset;
-          if (mask.icy(i, J)) {
-            velocity_magnitude += ssa_velocity(i, J).magnitude();
-            {
-              double H = ice_thickness(i, J);
-              unsigned int k = m_grid->kBelowHeight(H);
-              hardness += averaged_hardness(*flow_law, H, k, &z[0], enthalpy->get_column(i, J));
+
+            if (mask.floating_ice(i, J) and not mask.ice_margin(i, J)) {
+              eigen1 += m_strain_rates(i, J, 0);
+              eigen2 += m_strain_rates(i, J, 1);
+              fdens  += D(i, J);
+              N += 1;
             }
-            eigen1 += m_strain_rates(i, J, 0);
-            eigen2 += m_strain_rates(i, J, 1);
-            N += 1;
-          }
         }
 
         if (N > 0) {
           eigen1             /= N;
           eigen2             /= N;
-          hardness           /= N;
-          velocity_magnitude /= N;
+          fdens              /= N;
         }
       }
 
-      // [\ref Morlighem2016] equation 6
-      const double effective_tensile_strain_rate = sqrt(0.5 * (PetscSqr(max(0.0, eigen1)) +
-                                                               PetscSqr(max(0.0, eigen2))));
-      // [\ref Morlighem2016] equation 7
-      const double sigma_tilde = sqrt(3.0) * hardness * pow(effective_tensile_strain_rate,
-                                                            1.0 / ssa_n);
+ 
+      // Eigen Calving law
+      //
+      // eigen1 * eigen2 has units [s^-2] and calving_rate_horizontal
+      // [m*s^1] hence, eigen_calving_K has units [m*s]
+      if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
+        // spreading in all directions
+        //result(i, j) = m_K * eigen1 * (eigen2 - eigenCalvOffset);
+        result(i, j) = m_Knew * eigen1 * (eigen2 - eigenCalvOffset);
+      } else {
+        result(i, j) = 0.0;
+      }
 
-      // Calving law [\ref Morlighem2016] equation 4
-      result(i, j) = velocity_magnitude * sigma_tilde / m_sigma_max;
+      if (fdens > 0.0){
+        m_log->message(2,
+                           "!!!! fracdens=%f at (%d, %d)\n",
+                           fdens, i, j);
+        result(i, j) = 100000.0;
+      }
+
 
     } else { // end of "if (ice_free_ocean and next_to_floating)"
       result(i, j) = 0.0;

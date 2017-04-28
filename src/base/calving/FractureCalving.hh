@@ -44,7 +44,7 @@ protected:
                             IceModelVec2S &result) const;
 
 protected:
-  double m_sigma_max;
+  double m_K;
 };
 
 } // end of namespace calving
