@@ -23,10 +23,7 @@
 #include "base/util/error_handling.hh"
 #include "base/util/IceModelVec2CellType.hh"
 #include "remove_narrow_tongues.hh"
-#include "base/stressbalance/PISMStressBalance.hh"
-#include "base/stressbalance/ShallowStressBalance.hh"
 #include "base/util/PISMVars.hh"
-#include "base/rheology/FlowLaw.hh"
 #include "base/util/pism_options.hh"
 
 namespace pism {
@@ -37,6 +34,7 @@ FractureCalving::FractureCalving(IceGrid::ConstPtr g,
   : StressCalving(g, stress_balance, 2) {
 
   m_K = m_config->get_double("calving.eigen_calving.K");
+
 }
 
 FractureCalving::~FractureCalving() {
@@ -73,13 +71,15 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
 
   const double eigenCalvOffset = 0.0;
 
-  double m_Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
+  double Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
 
-  double m_Fnew = options::Real("-fracture_calving_K","Fracturecalving constant",0.0);
+  double Fnew = options::Real("-fracture_calving_K","Fracture Calving constant",0.0);
+  double Fbase = options::Real("-fracture_calving_B","Fracture Calving base",0.0);
+
 
   update_strain_rates();
 
-  const IceModelVec2S &D = *m_grid->variables().get_2d_cell_type("fracture_density");
+  const IceModelVec2S &D = *m_grid->variables().get_2d_scalar("fracture_density");
 
   IceModelVec::AccessList list{&mask, &result, &m_strain_rates, &D};
 
@@ -128,6 +128,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
         }
       }
 
+
  
       // Eigen Calving law
       //
@@ -135,17 +136,30 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
       // [m*s^1] hence, eigen_calving_K has units [m*s]
       if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
         // spreading in all directions
-        //result(i, j) = m_K * eigen1 * (eigen2 - eigenCalvOffset);
-        result(i, j) = m_Knew * eigen1 * (eigen2 - eigenCalvOffset);
+        result(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
       } else {
         result(i, j) = 0.0;
       }
 
+
+      // Fracture calving options
       if (fdens > 0.0){
-        m_log->message(2,
-                           "!!!! fracdens=%f at (%d, %d)\n",
-                           fdens, i, j);
-        result(i, j) = 100000.0;
+        //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
+        
+        // option 1
+        result(i, j) = Fnew * fdens;
+
+        // option 2
+        result(i, j) = Fbase + (Fnew - Fbase) * fdens;
+
+        // option 3
+        //if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
+        //  double Kdens = 
+        //  result(i, j) = Kdens * eigen1 * (eigen2 - eigenCalvOffset);
+        //} else {
+        //  result(i, j) = 0.0;
+        //}
+
       }
 
 

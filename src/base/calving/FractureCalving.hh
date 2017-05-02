@@ -45,6 +45,7 @@ protected:
 
 protected:
   double m_K;
+
 };
 
 } // end of namespace calving
