@@ -29,6 +29,14 @@
 #include "base/util/pism_options.hh"
 #include "iceModel.hh"
 
+#include "base/rheology/FlowLaw.hh"
+#include "base/stressbalance/ShallowStressBalance.hh"
+#include "base/energy/EnergyModel.hh"
+
+
+
+
+
 namespace pism {
 
 //! \file iMfractures.cc implementing calculation of fracture density with PIK options -fractures.
@@ -69,6 +77,22 @@ void IceModel::calculateFractureDensity() {
 
   double glenexp = m_config->get_double("stress_balance.ssa.Glen_exponent");
   double softness = m_config->get_double("flow_law.isothermal_Glen.ice_softness"); //const
+
+
+  bool borstad_limit = options::Bool("-constitutive_stress_limit", "Apply constitutive framework");
+
+  //if (borstad_limit){
+
+    const IceModelVec3 &enthalpy = m_energy_model->enthalpy();
+
+    list.add(enthalpy);
+    list.add(m_ice_thickness);
+
+    const double *z = &m_grid->z()[0];
+    const rheology::FlowLaw*
+    flow_law = m_stress_balance->shallow()->flow_law();
+  //}
+
 
   //options
   /////////////////////////////////////////////////////////
@@ -122,7 +146,6 @@ void IceModel::calculateFractureDensity() {
 
   bool fd2d_scheme = m_config->get_boolean("fracture_density.fd2d_scheme");
 
-  bool borstad_limit = options::Bool("-constitutive_stress_limit", "Apply constitutive framework");
 
   const double one_year = units::convert(m_sys, 1.0, "year", "seconds");
 
@@ -237,6 +260,15 @@ void IceModel::calculateFractureDensity() {
     //Borstad et al. 2016, constitutive framework for ice weakening
     if (borstad_limit) {
 
+      double H = m_ice_thickness(i, j);
+      if (H > 50.0) {
+
+      unsigned int k = m_grid->kBelowHeight(H);
+      double hardness = averaged_hardness(*flow_law, H, k, &z[0], enthalpy.get_column(i, j));
+      softness = pow(hardness, -glenexp)*H;
+
+      //m_log->message(2, "!!!! Ac=%e, Ah=%e at (%d, %d)\n", softness,pow(hardness, -glenexp)*H, i, j);
+
       double t0 = 130000.0; //kPa
       t0 = initThreshold;
       double kappa = 2.8;
@@ -245,21 +277,22 @@ void IceModel::calculateFractureDensity() {
       double e2=strain_rates(i, j, 1);
       double ee = sqrt(PetscSqr(e1) + PetscSqr(e2) - e1 * e2);
 
-      softness = ee/pow(sigmat,glenexp); //deviatoric stress use constant hardness!
-
+      //softness = ee/pow(sigmat,glenexp); //deviatoric stress use constant hardness!
       double e0 = softness * pow(t0,glenexp); //threshold for unfractured ice
+      //double e0 = pow( (t0/hardness) , glenexp); //threshold for unfractured ice
       double ex = exp((e0-ee)/(e0*(kappa-1)));
       double te = t0 * ex; // threshold for fractures ice
 
-      double ts = sigmat * (1-D_new(i, j)); //actual effective stress, but constant hardness
-      //double ts = pow ( (ee / softness) , 1/glenexp) * (1-D_new(i, j)); //actual effective stress
+      //double ts = hardness * pow(ee,glenexp) * (1-D_new(i, j)); //actual effective stress, but constant hardness
+      //double ts = sigmat * (1-D_new(i, j)); //actual effective stress, but constant hardness
+      double ts = pow ( (ee / softness) , 1/glenexp) * (1-D_new(i, j)); //actual effective stress
 
       if (ts > te && ee > e0) {
         fdnew = 1.0- ( ex * pow((ee/e0),-1/glenexp) ); //new fracture density
         D_new(i, j) = fdnew;
-        //m_log->message(2, "!!!! A=%e, e0=%f, ee=%f, t0=%f, te=%f, ts=%f, Dn=%f at (%d, %d)\n", softness,e0*one_year,ee*one_year,t0,te,sigmat,fdnew, i, j);
+        m_log->message(2, "!!!! H=%f, A=%e, e0=%f, ee=%f, ex=%e, t0=%f, te=%f, ts=%f, Dn=%f at (%d, %d)\n", H,softness,e0*one_year,ee*one_year,ex,t0,te,ts,fdnew, i, j);
       }
-
+      }
 
     } else { //default
       fdnew = gamma * (strain_rates(i, j, 0) - 0.0) * (1 - D_new(i, j));
