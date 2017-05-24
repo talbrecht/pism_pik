@@ -265,9 +265,7 @@ void IceModel::calculateFractureDensity() {
 
       unsigned int k = m_grid->kBelowHeight(H);
       double hardness = averaged_hardness(*flow_law, H, k, &z[0], enthalpy.get_column(i, j));
-      softness = pow(hardness, -glenexp)*H;
-
-      //m_log->message(2, "!!!! Ac=%e, Ah=%e at (%d, %d)\n", softness,pow(hardness, -glenexp)*H, i, j);
+      softness = pow(hardness, -glenexp);
 
       double t0 = 130000.0; //kPa
       t0 = initThreshold;
@@ -278,19 +276,19 @@ void IceModel::calculateFractureDensity() {
       double ee = sqrt(PetscSqr(e1) + PetscSqr(e2) - e1 * e2);
 
       //softness = ee/pow(sigmat,glenexp); //deviatoric stress use constant hardness!
-      double e0 = softness * pow(t0,glenexp); //threshold for unfractured ice
-      //double e0 = pow( (t0/hardness) , glenexp); //threshold for unfractured ice
+      //double e0 = softness * pow(t0,glenexp); //strain rate threshold for unfractured ice
+      double e0 = pow( (t0/hardness) , glenexp); //threshold for unfractured ice
       double ex = exp((e0-ee)/(e0*(kappa-1)));
       double te = t0 * ex; // threshold for fractures ice
 
-      //double ts = hardness * pow(ee,glenexp) * (1-D_new(i, j)); //actual effective stress, but constant hardness
+      double ts = hardness * pow(ee,1/glenexp) * (1-D_new(i, j)); //actual effective stress, but constant hardness
       //double ts = sigmat * (1-D_new(i, j)); //actual effective stress, but constant hardness
-      double ts = pow ( (ee / softness) , 1/glenexp) * (1-D_new(i, j)); //actual effective stress
+      //double ts = pow ( (ee / softness) , 1/glenexp) * (1-D_new(i, j)); //actual effective stress
 
       if (ts > te && ee > e0) {
         fdnew = 1.0- ( ex * pow((ee/e0),-1/glenexp) ); //new fracture density
         D_new(i, j) = fdnew;
-        m_log->message(2, "!!!! H=%f, A=%e, e0=%f, ee=%f, ex=%e, t0=%f, te=%f, ts=%f, Dn=%f at (%d, %d)\n", H,softness,e0*one_year,ee*one_year,ex,t0,te,ts,fdnew, i, j);
+        //m_log->message(2, "!!!! H=%f, A=%e, e0=%f, ee=%f, ex=%f, t0=%f, te=%f, ts=%f, Dn=%f at (%d, %d)\n", H,softness,e0*one_year,ee*one_year,ex,t0,te,ts,fdnew, i, j);
       }
       }
 
