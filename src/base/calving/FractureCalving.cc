@@ -71,10 +71,17 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
 
   const double eigenCalvOffset = 0.0;
 
+  //double seconds_per_year = convert(m_unit_system, 1.0, "year", "seconds");
+  double seconds_per_year = 3.15569259747e7;
+
   double Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
 
-  double Fnew = options::Real("-fracture_calving_K","Fracture Calving constant",0.0);
-  double Fbase = options::Real("-fracture_calving_B","Fracture Calving base",0.0);
+  int Foption = options::Integer("-fracture_calving_opt","Fracture Calving Option",0);
+
+  double F1 = options::Real("-fracture_calving_K1","Fracture Calving constant 1",0.0);
+  double F2a = options::Real("-fracture_calving_K2a","Fracture Calving constant 2a",0.0);
+  double F2b = options::Real("-fracture_calving_K2b","Fracture Calving constant 2b",0.0);
+  double F3 = options::Real("-fracture_calving_K3","Fracture Calving constant 3",0.0);
 
 
   update_strain_rates();
@@ -130,7 +137,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
 
 
  
-      // Eigen Calving law
+      // option 0: Eigen Calving law
       //
       // eigen1 * eigen2 has units [s^-2] and calving_rate_horizontal
       // [m*s^1] hence, eigen_calving_K has units [m*s]
@@ -141,26 +148,31 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
         result(i, j) = 0.0;
       }
 
-
+      
       // Fracture calving options
-      if (fdens > 0.0){
-        //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
-        
-        // option 1
-        result(i, j) = Fnew * fdens;
+      if (Foption == 1) {
+        if (fdens > 0.0){
+          // option 1
+          //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
+          //m_log->message(2, "!!!! eigen calving=%f, additional calving=%f at (%d, %d)\n", result(i, j)*seconds_per_year,F1*fdens, i, j);
+          result(i, j) += F1 * fdens / seconds_per_year;
+        }
 
-        // option 2
-        result(i, j) = Fbase + (Fnew - Fbase) * fdens;
+      } else if (Foption == 2) {
+          // option 2
+          result(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
 
-        // option 3
-        //if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
-        //  double Kdens = 
-        //  result(i, j) = Kdens * eigen1 * (eigen2 - eigenCalvOffset);
-        //} else {
-        //  result(i, j) = 0.0;
-        //}
+      } else if (Foption == 3) {
+          // option 3
 
-      }
+          if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
+            // spreading in all directions
+            result(i, j) = (F3 + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
+          } else {
+            result(i, j) = 0.0;
+          }
+      } 
+
 
 
     } else { // end of "if (ice_free_ocean and next_to_floating)"
