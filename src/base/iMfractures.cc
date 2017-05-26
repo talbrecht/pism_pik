@@ -86,7 +86,7 @@ void IceModel::calculateFractureDensity() {
     const IceModelVec3 &enthalpy = m_energy_model->enthalpy();
 
     list.add(enthalpy);
-    list.add(m_ice_thickness);
+    //list.add(m_ice_thickness);
 
     const double *z = &m_grid->z()[0];
     const rheology::FlowLaw*
@@ -263,28 +263,36 @@ void IceModel::calculateFractureDensity() {
       double H = m_ice_thickness(i, j);
       if (H > 50.0) {
 
+      //get vertical average hardness
       unsigned int k = m_grid->kBelowHeight(H);
       double hardness = averaged_hardness(*flow_law, H, k, &z[0], enthalpy.get_column(i, j));
       softness = pow(hardness, -glenexp);
 
+      //mean paramters from paper
       double t0 = 130000.0; //kPa
       t0 = initThreshold;
       double kappa = 2.8;
 
+      //effective strain rate
       double e1=strain_rates(i, j, 0);
       double e2=strain_rates(i, j, 1);
       double ee = sqrt(PetscSqr(e1) + PetscSqr(e2) - e1 * e2);
 
+      //threshold for unfractured ice
       //softness = ee/pow(sigmat,glenexp); //deviatoric stress use constant hardness!
-      //double e0 = softness * pow(t0,glenexp); //strain rate threshold for unfractured ice
-      double e0 = pow( (t0/hardness) , glenexp); //threshold for unfractured ice
-      double ex = exp((e0-ee)/(e0*(kappa-1)));
-      double te = t0 * ex; // threshold for fractures ice
+      //double e0 = softness * pow(t0,glenexp); //strain rate threshold
+      double e0 = pow( (t0/hardness) , glenexp); 
 
-      double ts = hardness * pow(ee,1/glenexp) * (1-D_new(i, j)); //actual effective stress, but constant hardness
+      //thresholf for fractured ice (exponential law)
+      double ex = exp((e0-ee)/(e0*(kappa-1)));
+      double te = t0 * ex; // stress threshold for fractures ice
+
+      //actual effective stress
+      double ts = hardness * pow(ee,1/glenexp) * (1-D_new(i, j));
       //double ts = sigmat * (1-D_new(i, j)); //actual effective stress, but constant hardness
       //double ts = pow ( (ee / softness) , 1/glenexp) * (1-D_new(i, j)); //actual effective stress
 
+      //fracture formation if threshold is hit
       if (ts > te && ee > e0) {
         fdnew = 1.0- ( ex * pow((ee/e0),-1/glenexp) ); //new fracture density
         D_new(i, j) = fdnew;
@@ -292,7 +300,7 @@ void IceModel::calculateFractureDensity() {
       }
       }
 
-    } else { //default
+    } else { //default fracture growth
       fdnew = gamma * (strain_rates(i, j, 0) - 0.0) * (1 - D_new(i, j));
       if (sigmat > initThreshold) {
         D_new(i, j) += fdnew * m_dt;
