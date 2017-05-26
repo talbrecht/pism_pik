@@ -28,10 +28,6 @@
 
 #include "SSB_diagnostics.hh"
 
-#include "base/rheology/FlowLaw.hh"
-#include "base/energy/EnergyModel.hh"
-#include "base/stressbalance/ShallowStressBalance.hh"
-
 namespace pism {
 namespace stressbalance {
 
