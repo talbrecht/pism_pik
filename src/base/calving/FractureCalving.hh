@@ -38,6 +38,8 @@ public:
 
   const IceModelVec2S& calving_rate() const;
 
+  virtual void compute_calving_option();
+
   // empty methods that we're required to implement:
 protected:
   virtual std::map<std::string, Diagnostic::Ptr> diagnostics_impl() const;
@@ -46,7 +48,10 @@ protected:
                             IceModelVec2S &result) const;
   double m_K;
 
+//private:
   IceModelVec2S calv_rate;
+
+  //void compute_calving_option();
 
 };
 

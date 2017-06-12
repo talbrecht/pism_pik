@@ -99,14 +99,11 @@ const IceModelVec2S& FractureCalving::calving_rate() const {
 }
 
 
+void FractureCalving::compute_calving_option() {
 
 
-//! \brief Uses principal strain rates to apply "eigencalving" with constant K.
-/*!
-  See equation (26) in [\ref Winkelmannetal2011].
-*/
-void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
-                                          IceModelVec2S &result) const {
+//void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
+//                                          IceModelVec2S &result) const {
 
   using std::max;
 
@@ -131,16 +128,15 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
   update_strain_rates();
 
   const IceModelVec2S &D = *m_grid->variables().get_2d_scalar("fracture_density");
+  const IceModelVec2CellType &mask         = *m_grid->variables().get_2d_cell_type("mask");
 
-  IceModelVec::AccessList list{&mask, &result, &m_strain_rates, &D};
+
+  IceModelVec::AccessList list{&mask, &m_strain_rates, &D};
   list.add(calv_rate);
-
 
   for (Points pt(*m_grid); pt; pt.next()) {
     const int i = pt.i(), j = pt.j();
 
-    // Find partially filled or empty grid boxes on the icefree ocean, which
-    // have floating ice neighbors after the mass continuity step
     if (mask.floating_ice(i, j) or mask.ice_free_ocean(i, j)) {
     //if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
 
@@ -182,6 +178,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
       }
 
 
+
       ///////////////////////////////////////////////////////////////
       // option 0: Eigen Calving law
       //
@@ -189,9 +186,9 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
       // [m*s^1] hence, eigen_calving_K has units [m*s]
       if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
         // spreading in all directions
-        result(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
+        calv_rate(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
       } else {
-        result(i, j) = 0.0;
+        calv_rate(i, j) = 0.0;
       }
 
       ///////////////////////////////////////////////////////////////
@@ -201,13 +198,13 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
           // option 1
           //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
           //m_log->message(2, "!!!! eigen calving=%f, additional calving=%f at (%d, %d)\n", result(i, j)*seconds_per_year,F1*fdens, i, j);
-          result(i, j) += F1 * fdens / seconds_per_year;
+          calv_rate(i, j) += F1 * fdens / seconds_per_year;
         }
 
       /////////////////////////////////////////////////////////////////
       } else if (Foption == 2) {
           // option 2
-          result(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
+          calv_rate(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
 
       /////////////////////////////////////////////////////////////////
       } else if (Foption == 3) {
@@ -215,32 +212,36 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
 
           if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
             // spreading in all directions
-            result(i, j) = (F3 + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
+            calv_rate(i, j) = (F3*fdens + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
           } else {
-            result(i, j) = 0.0;
+            calv_rate(i, j) = 0.0;
           }
       } 
 
 
-
     } else { // end of "if (ice_free_ocean and next_to_floating)"
-      result(i, j) = 0.0;
+      calv_rate(i, j) = 0.0;
     }
-
-
-    if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
-      //result(i, j) = calv_rate(i,j);
-      calv_rate(i, j) = 1.0; //test
-    }
-
-
-
 
   }   // end of loop over grid points
-
-   calv_rate.copy_from(result);
-
 }
+
+void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
+                                          IceModelVec2S &result) const {
+
+  compute_calving_option();
+
+  IceModelVec::AccessList list{&mask, &result, &calv_rate};
+
+  for (Points pt(*m_grid); pt; pt.next()) {
+    const int i = pt.i(), j = pt.j();
+
+    if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
+      result(i, j) = calv_rate(i,j);
+    }
+  }
+}
+
 
 } // end of namespace calving
 } // end of namespace pism
