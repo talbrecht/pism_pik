@@ -35,6 +35,15 @@ FractureCalving::FractureCalving(IceGrid::ConstPtr g,
 
   m_K = m_config->get_double("calving.eigen_calving.K");
 
+
+  //const unsigned int stencil_width = m_config->get_double("grid.max_stencil_width");
+  calv_rate.create(m_grid, "fracture_calving_rate",
+              WITHOUT_GHOSTS);
+  //              WITH_GHOSTS, stencil_width);
+  calv_rate.set_attrs("internal",
+                 "potential fracture calving rate",
+                 "m year-1", ""); 
+
 }
 
 FractureCalving::~FractureCalving() {
@@ -56,6 +65,41 @@ void FractureCalving::init() {
   m_strain_rates.set(0.0);
 
 }
+
+
+PMC_potential_calving_rate::PMC_potential_calving_rate(const FractureCalving *m)
+  : Diag<FractureCalving>(m) {
+  m_vars = {SpatialVariableMetadata(m_sys, "fracture_calving_rate")};
+  set_attrs("potential fracture calving rate",
+            "potential_fracture_calving_rate", 
+            "m year-1", "m year-1", 0);
+}
+
+IceModelVec::Ptr PMC_potential_calving_rate::compute_impl() {
+  IceModelVec2S::Ptr result(new IceModelVec2S);
+  result->create(m_grid, "fracture_calving_rate", WITHOUT_GHOSTS);
+  result->metadata() = m_vars[0];
+
+  result->copy_from(model->calving_rate());
+
+  return result;
+}
+
+
+std::map<std::string, Diagnostic::Ptr> FractureCalving::diagnostics_impl() const {
+  return {
+         //{"fracture_calving_rate",
+         //Diagnostic::Ptr(new CalvingRate(this, "fracture_calving_rate",
+         //                               "horizontal calving rate due to Fracture calving"))},
+         {"fracture_calving_rate", Diagnostic::Ptr(new PMC_potential_calving_rate(this))}};
+}
+
+const IceModelVec2S& FractureCalving::calving_rate() const {
+  return calv_rate;
+}
+
+
+
 
 //! \brief Uses principal strain rates to apply "eigencalving" with constant K.
 /*!
@@ -89,6 +133,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
   const IceModelVec2S &D = *m_grid->variables().get_2d_scalar("fracture_density");
 
   IceModelVec::AccessList list{&mask, &result, &m_strain_rates, &D};
+  list.add(calv_rate);
 
 
   for (Points pt(*m_grid); pt; pt.next()) {
@@ -96,7 +141,8 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
 
     // Find partially filled or empty grid boxes on the icefree ocean, which
     // have floating ice neighbors after the mass continuity step
-    if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
+    if (mask.floating_ice(i, j) or mask.ice_free_ocean(i, j)) {
+    //if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
 
       // Average of strain-rate eigenvalues in adjacent floating grid cells.
       double
@@ -136,7 +182,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
       }
 
 
- 
+      ///////////////////////////////////////////////////////////////
       // option 0: Eigen Calving law
       //
       // eigen1 * eigen2 has units [s^-2] and calving_rate_horizontal
@@ -148,7 +194,7 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
         result(i, j) = 0.0;
       }
 
-      
+      ///////////////////////////////////////////////////////////////
       // Fracture calving options
       if (Foption == 1) {
         if (fdens > 0.0){
@@ -158,10 +204,12 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
           result(i, j) += F1 * fdens / seconds_per_year;
         }
 
+      /////////////////////////////////////////////////////////////////
       } else if (Foption == 2) {
           // option 2
           result(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
 
+      /////////////////////////////////////////////////////////////////
       } else if (Foption == 3) {
           // option 3
 
@@ -178,13 +226,20 @@ void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
     } else { // end of "if (ice_free_ocean and next_to_floating)"
       result(i, j) = 0.0;
     }
-  }   // end of loop over grid points
-}
 
-std::map<std::string, Diagnostic::Ptr> FractureCalving::diagnostics_impl() const {
-  return {{"fracture_calving_rate",
-        Diagnostic::Ptr(new CalvingRate(this, "fracture_calving_rate",
-                                        "horizontal calving rate due to Fracture calving"))}};
+
+    if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
+      //result(i, j) = calv_rate(i,j);
+      calv_rate(i, j) = 1.0; //test
+    }
+
+
+
+
+  }   // end of loop over grid points
+
+   calv_rate.copy_from(result);
+
 }
 
 } // end of namespace calving

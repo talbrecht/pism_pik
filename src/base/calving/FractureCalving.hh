@@ -36,16 +36,25 @@ public:
 
   void init();
 
+  const IceModelVec2S& calving_rate() const;
+
   // empty methods that we're required to implement:
 protected:
   virtual std::map<std::string, Diagnostic::Ptr> diagnostics_impl() const;
 
   void compute_calving_rate(const IceModelVec2CellType &mask,
                             IceModelVec2S &result) const;
-
-protected:
   double m_K;
 
+  IceModelVec2S calv_rate;
+
+};
+
+class PMC_potential_calving_rate : public Diag<FractureCalving> {
+public:
+  PMC_potential_calving_rate(const FractureCalving *m);
+protected:
+  virtual IceModelVec::Ptr compute_impl();
 };
 
 } // end of namespace calving
