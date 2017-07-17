@@ -64,6 +64,9 @@ protected:
   virtual void shelf_base_temperature_impl(IceModelVec2S &result) const;
   virtual void shelf_base_mass_flux_impl(IceModelVec2S &result) const;
 
+  virtual void define_model_state_impl(const PIO &output) const;
+  virtual void write_model_state_impl(const PIO &output) const;
+
   std::vector<IceModelVec*> m_variables;
 
   bool   exicerises_set; // FIXME shouldn't this be always used?
@@ -76,6 +79,7 @@ private:
                   ocean_box_mask,
                   ocean_contshelf_mask,
                   ocean_mask,
+                  lake_mask,
                   DistGL,
                   DistIF,
                   Soc,
@@ -128,6 +132,7 @@ private:
   int      numberOfBasins, numberOfBoxes,
            Mx, My, dx, dy;
 };
+
 
 } // end of namespace ocean
 } // end of namespace pism
