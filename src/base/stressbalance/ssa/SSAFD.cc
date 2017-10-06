@@ -497,9 +497,13 @@ void SSAFD::assemble_matrix(bool include_basal_shear, Mat A) {
     list.add(*m_gl_mask);
   }
 
+  bool sub_grid_pinning;
+  sub_grid_pinning = options::Bool("-subgrid_pinning",
+    "Add basal friction accoding to fractional grounded area below ice shelves");
+
   // handles friction of the ice cell along ice-free bedrock margins when bedrock higher than ice surface (in simplified setups)
   bool lateral_drag_enabled=m_config->get_boolean("stress_balance.ssa.fd.lateral_drag.enabled");
-  if (lateral_drag_enabled) {
+  if (lateral_drag_enabled or sub_grid_pinning) {
     list.add(*m_thickness);
     list.add(*m_bed);
     list.add(*m_surface);
@@ -729,6 +733,20 @@ void SSAFD::assemble_matrix(bool include_basal_shear, Mat A) {
             beta = (*m_gl_mask)(i,j) * m_basal_sliding_law->drag((*m_tauc)(i,j), vel(i,j).u, vel(i,j).v);
           }
         }
+
+        if (sub_grid_pinning) {
+          // adjust basal drag at grid cells that are floating, but close to grounding as in Pollard et al., 2012:
+          if (floating_ice(M_ij)) {
+            double h_w = (*m_surface)(i,j)-(*m_thickness)(i,j)-(*m_bed)(i,j);
+            double s_dev = 50.0;
+            double fr = 0.5 * std::max(0.0,1.0-h_w/s_dev);
+            //m_log->message(1,
+            //       "  subgrid_pinning with %.2f, %.2f, %.5f, %.e, %.e, %d, %d) ...\n",
+            //       h_w,s_dev,fr,(*m_tauc)(i,j),m_basal_sliding_law->drag((*m_tauc)(i,j), vel(i,j).u, vel(i,j).v),i,j);
+            beta = fr * 5.0e5;
+          }
+        }
+
       }
 
       // add beta to diagonal entries
