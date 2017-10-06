@@ -41,7 +41,7 @@ protected:
   virtual MaxTimestep max_timestep_impl(double t) const;
   virtual void update_impl(double my_t, double my_dt);
  
-  bool temp_huybrechts_dewolde99_set, temp_era_interim_set, temp_era_interim_sin_set;
+  bool temp_huybrechts_dewolde99_set, temp_era_interim_set, temp_era_interim_sin_set, temp_era_interim_lon_set;
 
 };
 
