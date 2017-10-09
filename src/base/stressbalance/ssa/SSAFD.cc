@@ -731,6 +731,11 @@ void SSAFD::assemble_matrix(bool include_basal_shear, Mat A) {
           // reduce the basal drag at grid cells that are partially grounded:
           if (icy(M_ij)) {
             beta = (*m_gl_mask)(i,j) * m_basal_sliding_law->drag((*m_tauc)(i,j), vel(i,j).u, vel(i,j).v);
+            //if ((*m_gl_mask)(i,j) > 0.0 && (*m_gl_mask)(i,j)<1.0){
+            //  m_log->message(1,
+            //       "  subgrid_grounded with %.5f, %.e, %.e, %d, %d) ...\n",
+            //       (*m_gl_mask)(i,j),(*m_tauc)(i,j),m_basal_sliding_law->drag((*m_tauc)(i,j), vel(i,j).u, vel(i,j).v),i,j);
+            //}
           }
         }
 
@@ -739,11 +744,14 @@ void SSAFD::assemble_matrix(bool include_basal_shear, Mat A) {
           if (floating_ice(M_ij)) {
             double h_w = (*m_surface)(i,j)-(*m_thickness)(i,j)-(*m_bed)(i,j);
             double s_dev = 50.0;
+            double tauc_default = 5.0e5;
             double fr = 0.5 * std::max(0.0,1.0-h_w/s_dev);
-            //m_log->message(1,
-            //       "  subgrid_pinning with %.2f, %.2f, %.5f, %.e, %.e, %d, %d) ...\n",
-            //       h_w,s_dev,fr,(*m_tauc)(i,j),m_basal_sliding_law->drag((*m_tauc)(i,j), vel(i,j).u, vel(i,j).v),i,j);
-            beta = fr * 5.0e5;
+            if (fr > 0.0){
+              m_log->message(5,
+                   "  subgrid_pinning with %.2f, %.2f, %.5f, %.3e, %d, %d) ...\n",
+                   h_w,s_dev,fr,m_basal_sliding_law->drag(tauc_default, vel(i,j).u, vel(i,j).v),i,j);
+            }
+            beta = fr * m_basal_sliding_law->drag(tauc_default, vel(i,j).u, vel(i,j).v);
           }
         }
 
