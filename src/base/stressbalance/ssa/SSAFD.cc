@@ -744,7 +744,7 @@ void SSAFD::assemble_matrix(bool include_basal_shear, Mat A) {
           if (floating_ice(M_ij)) {
             double h_w = (*m_surface)(i,j)-(*m_thickness)(i,j)-(*m_bed)(i,j);
             double s_dev = 50.0;
-            double tauc_default = 5.0e5;
+            double tauc_default = 5.0e4;
             double fr = 0.5 * std::max(0.0,1.0-h_w/s_dev);
             if (fr > 0.0){
               m_log->message(5,
