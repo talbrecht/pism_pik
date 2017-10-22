@@ -271,6 +271,9 @@ protected:
 
   //! mask to determine grounding line position
   IceModelVec2S m_gl_mask;
+  
+  //! thickness of ice-equivalent load for bed deformation model
+  IceModelVec2S m_beddef_load;
 
   // parameters
   //! mass continuity time step, s
@@ -357,6 +360,8 @@ protected:
                                             IceModelVec2S &H,
                                             FluxCounters &fluxes_scalar,
                                             FluxFields &fluxes_2d);
+
+  virtual void compute_load_for_beddef();
 
   virtual void update_grounded_cell_fraction();
   virtual void do_calving();

@@ -157,9 +157,15 @@ void IceModel::model_state_setup() {
 
   // Initialize a bed deformation model. This may use ice thickness initialized above.
   if (m_beddef) {
+    
     m_beddef->init(input);
     m_grid->variables().add(m_beddef->bed_elevation());
     m_grid->variables().add(m_beddef->uplift());
+
+    // FIXME: workaround to get bed topography for load calculation
+    compute_load_for_beddef();
+    m_beddef->init(input);
+
   }
 
   // By now ice geometry is set (including regridding) and so we can initialize the ocean model,

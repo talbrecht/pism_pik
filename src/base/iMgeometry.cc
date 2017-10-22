@@ -833,4 +833,40 @@ void IceModel::update_grounded_cell_fraction() {
                           m_gl_mask, NULL, NULL);
 }
 
+
+//! Compute load
+void IceModel::compute_load_for_beddef() {
+
+  //bed_deformation.include_ocean_load
+  const bool add_ocean = options::Bool("-include_ocean_load", "consider ocean load for bed deformation model");
+
+  if (add_ocean) { // consider the load of the ocean water column and neglect the load cof ice shelves
+    
+    const double
+    ice_density   = m_config->get_double("constants.ice.density"),
+    ocean_density = m_config->get_double("constants.sea_water.density");
+
+    assert(m_ocean != NULL);
+    const double sea_level = m_ocean->sea_level_elevation();
+
+    assert(m_beddef != NULL);
+    const IceModelVec2S &bed_topography = m_beddef->bed_elevation();
+    //const IceModelVec2S &bed_topography = m_grid.get_2d_scalar("bedrock_altitude");
+
+    IceModelVec::AccessList list{&m_beddef_load, &m_ice_thickness, &bed_topography};
+
+    //ice_equivalent_load_thickness = max(thk - rhow/rhoi*(sl - bed), 0.0) + rhow/rhoi*(sl - bed)
+    for (Points p(*m_grid); p; p.next()) {
+      const int i = p.i(), j = p.j();
+      double ocean_load = ocean_density/ice_density*(sea_level - bed_topography(i, j));
+      m_beddef_load(i, j) = std::max(0.0, m_ice_thickness(i, j) - ocean_load) + ocean_load;
+    }
+
+  } else {
+    
+     m_beddef_load.copy_from(m_ice_thickness);
+  }
+}
+
+
 } // end of namespace pism

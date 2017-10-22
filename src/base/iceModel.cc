@@ -366,6 +366,15 @@ void IceModel::createVecs() {
     m_grid->variables().add(m_gl_mask);
   }
 
+  //if (m_config->get_boolean("bed_deformation.include_ocean_load")) {
+    m_beddef_load.create(m_grid, "beddef_load", WITHOUT_GHOSTS);
+    m_beddef_load.set_attrs("internal",
+                      "thickness of ice and ice-equivalent ocean column",
+                      "", "");
+    m_grid->variables().add(m_beddef_load);
+  //}
+
+
   // grounded_dragging_floating integer mask
   m_cell_type.create(m_grid, "mask", WITH_GHOSTS, WIDE_STENCIL);
   m_cell_type.set_attrs("diagnostic", "ice-type (ice-free/grounded/floating/ocean) integer mask",
@@ -660,14 +669,17 @@ void IceModel::step(bool do_mass_continuity,
   do_calving();
   profiling.end("calving");
 
-  //! \li compute the bed deformation, which only depends on current thickness
-  //! and bed elevation
+  //! \li compute the bed deformation, which only depends on current thickness,
+  //! ocean layer thickness and bed elevation
   if (m_beddef) {
+
     const IceModelVec2S &bed_topography = m_beddef->bed_elevation();
     int topg_state_counter = bed_topography.get_state_counter();
 
     profiling.begin("bed deformation");
-    m_beddef->update(current_time, m_dt);
+    //m_beddef->update(current_time, m_dt);
+    compute_load_for_beddef();
+    m_beddef->update(m_beddef_load,current_time, m_dt);
     profiling.end("bed deformation");
 
     if (bed_topography.get_state_counter() != topg_state_counter) {

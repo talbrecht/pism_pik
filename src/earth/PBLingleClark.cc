@@ -119,12 +119,18 @@ void PBLingleClark::bootstrap_impl(const IceModelVec2S &bed,
 
   m_topg_last.copy_from(bed);
 
-  petsc::Vec::Ptr thickness0 = ice_thickness.allocate_proc0_copy();
+  //petsc::Vec::Ptr thickness0 = ice_thickness.allocate_proc0_copy();
+
+  const IceModelVec2S *load_thickness = m_grid->variables().get_2d_scalar("beddef_load");
+  petsc::Vec::Ptr thickness0 = load_thickness->allocate_proc0_copy();
+
 
   // initialize the plate displacement
   {
     bed_uplift.put_on_proc0(*m_work0);
-    ice_thickness.put_on_proc0(*thickness0);
+    //ice_thickness.put_on_proc0(*thickness0);
+    load_thickness->put_on_proc0(*thickness0);
+
 
     ParallelSection rank0(m_grid->com);
     try {
@@ -168,7 +174,8 @@ void PBLingleClark::init_impl(const InputOptions &opts) {
   // Initialize bed topography and uplift maps.
   BedDef::init_impl(opts);
 
-  const IceModelVec2S *ice_thickness = m_grid->variables().get_2d_scalar("land_ice_thickness");
+  const IceModelVec2S *load_thickness = m_grid->variables().get_2d_scalar("beddef_load");
+  //const IceModelVec2S *ice_thickness = m_grid->variables().get_2d_scalar("land_ice_thickness");
 
   m_topg_last.copy_from(m_topg);
 
@@ -176,7 +183,7 @@ void PBLingleClark::init_impl(const InputOptions &opts) {
     // Set m_viscous_bed_displacement by reading from the input file.
     m_viscous_bed_displacement.read(opts.filename, opts.record);
   } else if (opts.type == INIT_BOOTSTRAP) {
-    this->bootstrap(m_topg, m_uplift, *ice_thickness);
+    this->bootstrap(m_topg, m_uplift, *load_thickness);
   } else {
     // do nothing
   }
@@ -188,7 +195,7 @@ void PBLingleClark::init_impl(const InputOptions &opts) {
   // Now that m_viscous_bed_displacement is finally initialized, put it on rank 0 and initialize
   // m_bdLC itself.
   {
-    ice_thickness->put_on_proc0(*m_work0);
+    load_thickness->put_on_proc0(*m_work0);
     m_viscous_bed_displacement.put_on_proc0(*m_viscous_bed_displacement0);
 
     ParallelSection rank0(m_grid->com);
@@ -229,7 +236,7 @@ const IceModelVec2S& PBLingleClark::total_displacement() const {
 }
 
 //! Update the Lingle-Clark bed deformation model.
-void PBLingleClark::update_with_thickness_impl(const IceModelVec2S &ice_thickness,
+void PBLingleClark::update_with_thickness_impl(const IceModelVec2S &load_thickness,
                                                double t, double dt) {
 
   if ((fabs(t - m_t)   < 1e-12) &&
@@ -252,7 +259,7 @@ void PBLingleClark::update_with_thickness_impl(const IceModelVec2S &ice_thicknes
 
   m_t_beddef_last = t_final;
 
-  ice_thickness.put_on_proc0(*m_work0);
+  load_thickness.put_on_proc0(*m_work0);
 
   ParallelSection rank0(m_grid->com);
   try {
