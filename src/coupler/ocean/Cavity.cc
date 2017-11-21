@@ -1433,7 +1433,7 @@ std::map<std::string, Diagnostic::Ptr> Cavity::diagnostics_impl() const {
   result["pico_ocean_mask"] = Diagnostic::wrap(ocean_mask);
   result["pico_lake_mask"] = Diagnostic::wrap(lake_mask);
   result["pico_dist_grounding_line"] = Diagnostic::wrap(DistGL);
-  result["pico_Dist_iceshelf_front"] = Diagnostic::wrap(DistIF);
+  result["pico_dist_iceshelf_front"] = Diagnostic::wrap(DistIF);
   result["pico_Soc"] = Diagnostic::wrap(Soc);
   result["pico_Toc"] = Diagnostic::wrap(Toc);
   result["pico_T_star"] = Diagnostic::wrap(T_star);
