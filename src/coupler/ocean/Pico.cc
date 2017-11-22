@@ -733,8 +733,8 @@ void Cavity::identify_shelf_mask() {
     shelf_mask(i,j) = new_labels[label];
   }
 
-  //FIXME INCLUDE numberOfShelves = new_label_current; // total numer of shelves +1
-  //FIXME INCLUDE m_log->message(5, "Number of shelves = %d\n", numberOfShelves-1); // internally calculated with +1
+  numberOfShelves = new_label_current; // total numer of shelves +1
+  m_log->message(5, "Number of shelves = %d\n", numberOfShelves-1); // internally calculated with +1
 }
 
 
