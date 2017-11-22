@@ -102,6 +102,7 @@ private:
   void initBasinsOptions(const Constants &constants);
   void round_basins();
   void identifyMASK(IceModelVec2S &inputmask, std::string masktype);
+  void identify_shelf_mask();
   void compute_ocean_input_per_basin(const Constants &constants);
   void compute_distances();
   void identify_ocean_box_mask(const Constants &constants);
