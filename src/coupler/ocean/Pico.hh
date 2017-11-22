@@ -81,6 +81,7 @@ private:
                   cbasins, // a basin defines the domain where one box model instance is solved
                   icerise_mask,
                   ocean_box_mask,
+                  shelf_mask,
                   ocean_contshelf_mask,
                   ocean_mask,
                   lake_mask,

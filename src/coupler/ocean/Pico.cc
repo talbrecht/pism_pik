@@ -157,6 +157,12 @@ Cavity::Cavity(IceGrid::ConstPtr g)
                     "", "");
   m_variables.push_back(&cbasins);
 
+
+  // mask to identify ice shelves
+  shelf_mask.create(m_grid, "pico_shelf_mask", WITH_GHOSTS);
+  shelf_mask.set_attrs("model_state", "mask for individual ice shelves","", "");
+  m_variables.push_back(&shelf_mask);
+
   // mask to identify the ocean boxes
   ocean_box_mask.create(m_grid, "pico_ocean_box_mask", WITH_GHOSTS);
   ocean_box_mask.set_attrs("model_state", "mask displaying ocean box model grid","", "");
@@ -304,6 +310,7 @@ void Cavity::define_model_state_impl(const PIO &output) const {
   
   cbasins.define(output);
   ocean_box_mask.define(output);
+  shelf_mask.define(output);
   Soc_box0.define(output);
   Toc_box0.define(output);
   overturning.define(output);
@@ -316,6 +323,7 @@ void Cavity::write_model_state_impl(const PIO &output) const {
   
   cbasins.write(output);
   ocean_box_mask.write(output);
+  shelf_mask.write(output);
   Soc_box0.write(output);
   Toc_box0.write(output);
   overturning.write(output);
@@ -1427,6 +1435,7 @@ std::map<std::string, Diagnostic::Ptr> Cavity::diagnostics_impl() const {
   result["pico_salinity_box0"] = Diagnostic::wrap(Soc_box0);
   result["pico_temperature_box0"] = Diagnostic::wrap(Toc_box0); 
   result["pico_ocean_box_mask"] = Diagnostic::wrap(ocean_box_mask);  
+  result["pico_shelf_mask"] = Diagnostic::wrap(shelf_mask);
 
   result["pico_bmelt_shelf"] = Diagnostic::wrap(basalmeltrate_shelf);
   result["pico_icerise_mask"] = Diagnostic::wrap(icerise_mask);
