@@ -30,6 +30,7 @@ add_library (pismboundary OBJECT
   ./ocean/Initialization.cc
   ./surface/Initialization.cc
   ./surface/localMassBalance.cc
+  ./surface/localITM.cc
   ./surface/SurfaceModel.cc
   ./surface/Cache.cc
   ./surface/ConstantPIK.cc
