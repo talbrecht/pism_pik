@@ -123,14 +123,14 @@ public:
 
   virtual unsigned int get_timeseries_length(double dt);
 
-  virtual double get_albedo();
+  virtual double get_albedo(double melt, double snow_depth, double firn_depth);
   
   virtual void calculate_ITM_melt(double dt_series,
-                        const std::vector<double> &insolation,
-                        const std::vector<double> &T,
-                        std::vector<double> &surface_elevation,
-                        std::vector<double> &albedo,  
-                        std::vector<double> &ITM_melt);
+                        const double &insolation,
+                        const double &T,
+                        double &surface_elevation,
+                        double &albedo,  
+                        double &ITM_melt);
 
   virtual void get_snow_accumulation(const std::vector<double> &T,
                                      std::vector<double> &precip_rate);

@@ -75,34 +75,69 @@ unsigned int ITMMassBalance::get_timeseries_length(double dt) {
 }
 
 
-double ITMMassBalance::get_albedo(){
-  return 0.;
+
+
+/*  Determine albedo over ice cells (no ground or ocean cells respected here)
+    if melt >= critical_melt, change albedo to melting snow
+    TODO: put constants into config. 
+*/
+double ITMMassBalance::get_albedo(double melt, double snow_depth, double firn_depth){
+  double albedo = 0. ;
+  const double critical_melt = 100.;
+  const double albedo_dry_snow = 0.8;
+  const double albedo_melting_snow = 0.6;
+  const double albedo_firn = 0.5;
+  const double albedo_ice = 0.4; 
+
+  if (snow_depth >= 0.) {
+    if (melt < critical_melt) {
+      albedo = albedo_dry_snow;
+    }
+    else {
+      albedo = albedo_melting_snow;
+    }
+  }
+  else if (firn_depth >= 0.) {
+    albedo = albedo_firn;
+  }
+  else {
+    albedo = albedo_ice;
+  }
+  return albedo;
 }
 
 
 //! 
 /* compute melt by equation (16) from Robinson2010
  * @param dt_series length of the step for the time-series
- * @param T air temperature (array of length N)
- * @param N length of the T array
+ * @param T air temperature at time [k]
+ * @param insolation at time [k]
+ * @param surface_elevation
+ * @param albedo which was should be figured by get_albedo (?)
  * @param[out] melt pointer to a pre-allocated array with N-1 elements
  * output in mm water equivalent
  */
 void ITMMassBalance::calculate_ITM_melt(double dt_series,
-                                         const std::vector<double> &insolation,
-                                         const std::vector<double> &T,
-                                         std::vector<double> &surface_elevation,
-                                         std::vector<double> &albedo,  
-                                         std::vector<double> &ITM_melt) {
-  // assert(T.size() == ITMs.size());
+                                         const double &insolation,
+                                         const double &T,
+                                         double &surface_elevation,
+                                         double &albedo,  
+                                         double &ITM_melt) {
+
+  const double rho_w = 1.;    // mass density of water
+  const double L_m = 1.;      // latent heat of ice melting
+  double z = 1.;               // surface elevation
+  double tau_a = 1. +  1. * z;  // transmissivity of the atmosphere, linear fit, plug in values
+  const double itm_c = 1.;
+  const double itm_lambda = 1.; 
+
   assert(dt_series > 0.0);
 
   const double h_days = dt_series / m_seconds_per_day;
-  const size_t N = T.size();
 
-  for (unsigned int k = 0; k < N; ++k) {
-    ITM_melt[k] = 0; // hier muss irgendwo die Formel (16) from Robinson2010;
-  }
+  // TODO: check units!!!!
+  ITM_melt = h_days / (rho_w * L_m) * (tau_a*(1. - albedo) * insolation + itm_c + itm_lambda * T); // hier muss irgendwo die Formel (16) from Robinson2010;
+
 }
 
 
