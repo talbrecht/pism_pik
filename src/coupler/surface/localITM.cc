@@ -81,13 +81,15 @@ unsigned int ITMMassBalance::get_timeseries_length(double dt) {
     if melt >= critical_melt, change albedo to melting snow
     TODO: put constants into config. 
 */
-double ITMMassBalance::get_albedo(double melt, double snow_depth, double firn_depth){
+double ITMMassBalance::get_albedo(double melt, double snow_depth, double firn_depth, int mask_value){
   double albedo = 0. ;
   const double critical_melt = 100.;
   const double albedo_dry_snow = 0.8;
   const double albedo_melting_snow = 0.6;
   const double albedo_firn = 0.5;
   const double albedo_ice = 0.4; 
+  const double albedo_land = 0.2;
+  const double albedo_ocean = 0.1;
 
   if (snow_depth >= 0.) {
     if (melt < critical_melt) {
@@ -101,7 +103,18 @@ double ITMMassBalance::get_albedo(double melt, double snow_depth, double firn_de
     albedo = albedo_firn;
   }
   else {
-    albedo = albedo_ice;
+
+// TODO: I think this is the wrong way to do it! It's just pseudocodish to get idea across. 
+
+    if (mask_value == 4){ // mask value for ice free ocean
+      albedo = albedo_ocean;
+    }
+    if (mask_value == 0){ // mask value for bedrock
+      albedo =  albedo_land;
+    }
+    if (mask_value == 2 || mask_value == 3){ // mask value for grounded or floating ice
+      albedo = albedo_ice;
+    }
   }
   return albedo;
 }
@@ -117,12 +130,12 @@ double ITMMassBalance::get_albedo(double melt, double snow_depth, double firn_de
  * @param[out] melt pointer to a pre-allocated array with N-1 elements
  * output in mm water equivalent
  */
-void ITMMassBalance::calculate_ITM_melt(double dt_series,
+double ITMMassBalance::calculate_ITM_melt(double dt_series,
                                          const double &insolation,
                                          const double &T,
                                          double &surface_elevation,
-                                         double &albedo,  
-                                         double &ITM_melt) {
+                                         double &albedo) {
+  double ITM_melt = 0.;
 
   const double rho_w = 1.;    // mass density of water
   const double L_m = 1.;      // latent heat of ice melting
@@ -138,6 +151,7 @@ void ITMMassBalance::calculate_ITM_melt(double dt_series,
   // TODO: check units!!!!
   ITM_melt = h_days / (rho_w * L_m) * (tau_a*(1. - albedo) * insolation + itm_c + itm_lambda * T); // hier muss irgendwo die Formel (16) from Robinson2010;
 
+  return ITM_melt;
 }
 
 

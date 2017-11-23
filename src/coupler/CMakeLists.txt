@@ -41,6 +41,7 @@ add_library (pismboundary OBJECT
   ./surface/Delta_T.cc
   ./surface/Simple.cc
   ./surface/TemperatureIndex.cc
+  ./surface/TemperatureIndexITM.cc
   ./surface/ForceThickness.cc
   ./surface/Anomaly.cc
   ./surface/Factory.cc

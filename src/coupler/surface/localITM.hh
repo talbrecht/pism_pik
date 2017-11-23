@@ -60,13 +60,19 @@ public:
 
   virtual unsigned int get_timeseries_length(double dt) = 0;
 
+  virtual double get_albedo(double melt, 
+                            double snow_depth, 
+                            double firn_depth, 
+                            int mask_value) = 0;
+
   //! Count positive degree days (ITMs).  Returned value in units of K day.
   /*! Inputs T[0],...,T[N-1] are temperatures (K) at times t, t+dt_series, ..., t+(N-1)dt_series.
     Inputs `t`, `dt_series` are in seconds.  */
-  /*virtual void get_ITMs(double dt_series,
-                        //const std::vector<double> &albedo,
-                        const std::vector<double> &T,
-                        std::vector<double> &ITMs) = 0;*/
+  virtual double calculate_ITM_melt(double dt_series,
+                                    const double &insolation,
+                                    const double &T,
+                                    double &surface_elevation,
+                                    double &albedo) = 0;
 
   /*! Remove rain from precipitation. */
   virtual void get_snow_accumulation(const std::vector<double> &T,
@@ -123,14 +129,13 @@ public:
 
   virtual unsigned int get_timeseries_length(double dt);
 
-  virtual double get_albedo(double melt, double snow_depth, double firn_depth);
+  virtual double get_albedo(double melt, double snow_depth, double firn_depth, int mask_value);
   
-  virtual void calculate_ITM_melt(double dt_series,
+  virtual double calculate_ITM_melt(double dt_series,
                         const double &insolation,
                         const double &T,
                         double &surface_elevation,
-                        double &albedo,  
-                        double &ITM_melt);
+                        double &albedo);
 
   virtual void get_snow_accumulation(const std::vector<double> &T,
                                      std::vector<double> &precip_rate);
