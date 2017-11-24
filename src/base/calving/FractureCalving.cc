@@ -69,7 +69,7 @@ void FractureCalving::init() {
 
 PMC_potential_calving_rate::PMC_potential_calving_rate(const FractureCalving *m)
   : Diag<FractureCalving>(m) {
-  m_vars = {SpatialVariableMetadata(m_sys, "fracture_calving_rate")};
+  m_vars = {SpatialVariableMetadata(m_sys, "fracture_calving_rate_potential")};
   set_attrs("potential fracture calving rate",
             "potential_fracture_calving_rate", 
             "m year-1", "m year-1", 0);
@@ -77,7 +77,7 @@ PMC_potential_calving_rate::PMC_potential_calving_rate(const FractureCalving *m)
 
 IceModelVec::Ptr PMC_potential_calving_rate::compute_impl() {
   IceModelVec2S::Ptr result(new IceModelVec2S);
-  result->create(m_grid, "fracture_calving_rate", WITHOUT_GHOSTS);
+  result->create(m_grid, "fracture_calving_rate_potential", WITHOUT_GHOSTS);
   result->metadata() = m_vars[0];
 
   result->copy_from(model->calving_rate());
@@ -87,23 +87,25 @@ IceModelVec::Ptr PMC_potential_calving_rate::compute_impl() {
 
 
 std::map<std::string, Diagnostic::Ptr> FractureCalving::diagnostics_impl() const {
+
   return {
-         //{"fracture_calving_rate",
-         //Diagnostic::Ptr(new CalvingRate(this, "fracture_calving_rate",
-         //                               "horizontal calving rate due to Fracture calving"))},
-         {"fracture_calving_rate", Diagnostic::Ptr(new PMC_potential_calving_rate(this))}};
+          {"fracture_calving_rate",Diagnostic::Ptr(new CalvingRate(this, "fracture_calving_rate",
+                                             "horizontal calving rate due to fracture-calving"))},
+          {"fracture_calving_rate_potential", Diagnostic::Ptr(new PMC_potential_calving_rate(this))},
+         };
+
 }
 
-const IceModelVec2S& FractureCalving::calving_rate() const {
+//const IceModelVec2S& FractureCalving::calving_rate(IceModelVec2S &calv_rate) const{
+const IceModelVec2S& FractureCalving::calving_rate() const{
+
+  //compute_calving_option(calvrate);
+
   return calv_rate;
 }
 
 
-void FractureCalving::compute_calving_option() {
-
-
-//void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
-//                                          IceModelVec2S &result) const {
+void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
 
   using std::max;
 
@@ -132,7 +134,7 @@ void FractureCalving::compute_calving_option() {
 
 
   IceModelVec::AccessList list{&mask, &m_strain_rates, &D};
-  list.add(calv_rate);
+  list.add(result);
 
   for (Points pt(*m_grid); pt; pt.next()) {
     const int i = pt.i(), j = pt.j();
@@ -186,9 +188,9 @@ void FractureCalving::compute_calving_option() {
       // [m*s^1] hence, eigen_calving_K has units [m*s]
       if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
         // spreading in all directions
-        calv_rate(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
+        result(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
       } else {
-        calv_rate(i, j) = 0.0;
+        result(i, j) = 0.0;
       }
 
       ///////////////////////////////////////////////////////////////
@@ -198,13 +200,13 @@ void FractureCalving::compute_calving_option() {
           // option 1
           //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
           //m_log->message(2, "!!!! eigen calving=%f, additional calving=%f at (%d, %d)\n", result(i, j)*seconds_per_year,F1*fdens, i, j);
-          calv_rate(i, j) += F1 * fdens / seconds_per_year;
+          result(i, j) += F1 * fdens / seconds_per_year;
         }
 
       /////////////////////////////////////////////////////////////////
       } else if (Foption == 2) {
           // option 2
-          calv_rate(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
+          result(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
 
       /////////////////////////////////////////////////////////////////
       } else if (Foption == 3) {
@@ -212,34 +214,39 @@ void FractureCalving::compute_calving_option() {
 
           if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
             // spreading in all directions
-            calv_rate(i, j) = (F3*fdens + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
+            result(i, j) = (F3*fdens + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
           } else {
-            calv_rate(i, j) = 0.0;
+            result(i, j) = 0.0;
           }
       } 
 
 
     } else { // end of "if (ice_free_ocean and next_to_floating)"
-      calv_rate(i, j) = 0.0;
+      result(i, j) = 0.0;
     }
 
   }   // end of loop over grid points
+
+  //return result;
 }
 
 void FractureCalving::compute_calving_rate(const IceModelVec2CellType &mask,
                                           IceModelVec2S &result) const {
 
-  compute_calving_option();
+  compute_calving_option(result);
 
-  IceModelVec::AccessList list{&mask, &result, &calv_rate};
+  /*
+  IceModelVec::AccessList list{&mask, &result};
 
   for (Points pt(*m_grid); pt; pt.next()) {
     const int i = pt.i(), j = pt.j();
 
-    if (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j)) {
-      result(i, j) = calv_rate(i,j);
+    bool calving_at_front = (mask.ice_free_ocean(i, j) and mask.next_to_floating_ice(i, j));
+
+    if (!calving_at_front) {
+      result(i, j) = 0.0;
     }
-  }
+  }*/
 }
 
 

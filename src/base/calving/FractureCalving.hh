@@ -38,7 +38,9 @@ public:
 
   const IceModelVec2S& calving_rate() const;
 
-  virtual void compute_calving_option();
+  virtual void compute_calving_option(IceModelVec2S &result) const;
+
+  IceModelVec2S calv_rate;
 
   // empty methods that we're required to implement:
 protected:
@@ -46,12 +48,8 @@ protected:
 
   void compute_calving_rate(const IceModelVec2CellType &mask,
                             IceModelVec2S &result) const;
+
   double m_K;
-
-//private:
-  IceModelVec2S calv_rate;
-
-  //void compute_calving_option();
 
 };
 
