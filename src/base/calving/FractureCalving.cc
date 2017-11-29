@@ -112,28 +112,37 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
   // Distance (grid cells) from calving front where strain rate is evaluated
   int offset = m_stencil_width;
 
-  const double eigenCalvOffset = 0.0;
+  //const double eigenCalvOffset = 0.0;
+  double eigenCalvOffset = options::Real("-eigen2_offset","critical arch for calving",0.0);
+  double eigen2Thresh = options::Real("-eigen2_thresh","threshold for eigen2",0.0);
+  double tau0 = options::Real("-fractoug_thresh", "calving threshold for fracture toughness",0.0);
 
   //double seconds_per_year = convert(m_unit_system, 1.0, "year", "seconds");
   double seconds_per_year = 3.15569259747e7;
+ 
 
   double Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
 
   int Foption = options::Integer("-fracture_calving_opt","Fracture Calving Option",0);
 
   double F1 = options::Real("-fracture_calving_K1","Fracture Calving constant 1",0.0);
-  double F2a = options::Real("-fracture_calving_K2a","Fracture Calving constant 2a",0.0);
-  double F2b = options::Real("-fracture_calving_K2b","Fracture Calving constant 2b",0.0);
+  double F2 = options::Real("-fracture_calving_K2","Fracture Calving constant 2",0.0);
   double F3 = options::Real("-fracture_calving_K3","Fracture Calving constant 3",0.0);
+  double F4 = options::Real("-fracture_calving_K4","Fracture Calving constant 4",0.0);
+  double F5 = options::Real("-fracture_calving_K5","Fracture Calving constant 5",0.0);
+  m_log->message(2,
+    "* Set fracture calving constants: %.3e, %.3e, %.3e, %.3e, %.3e, %.3e \n", F1, F2, F3, F4, F5);
 
 
   update_strain_rates();
 
   const IceModelVec2S &D = *m_grid->variables().get_2d_scalar("fracture_density");
+  const IceModelVec2S &thk = *m_grid->variables().get_2d_scalar("land_ice_thickness");
+  const IceModelVec2S &T = *m_grid->variables().get_2d_scalar("fracture_toughness");
+  
   const IceModelVec2CellType &mask         = *m_grid->variables().get_2d_cell_type("mask");
 
-
-  IceModelVec::AccessList list{&mask, &m_strain_rates, &D};
+  IceModelVec::AccessList list{&mask, &m_strain_rates, &D, &thk, &T};
   list.add(result);
 
   for (Points pt(*m_grid); pt; pt.next()) {
@@ -146,7 +155,9 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
       double
         eigen1             = 0.0,
         eigen2             = 0.0,
-        fdens              = 0.0;
+        fdens              = 0.0,
+        ftoug              = 0.0,
+        Hmean              = 0.0;
       {
         int N = 0;
         for (int p = -1; p < 2; p += 2) {
@@ -156,6 +167,8 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
               eigen1 += m_strain_rates(I, j, 0);
               eigen2 += m_strain_rates(I, j, 1);
               fdens  += D(I, j);
+              ftoug  += T(I, j);
+              Hmean  += thk(I, j);
               N += 1;
             }
 
@@ -168,6 +181,8 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
               eigen1 += m_strain_rates(i, J, 0);
               eigen2 += m_strain_rates(i, J, 1);
               fdens  += D(i, J);
+              ftoug  += T(i, J);
+              Hmean  += thk(i, J);
               N += 1;
             }
         }
@@ -176,6 +191,7 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
           eigen1             /= N;
           eigen2             /= N;
           fdens              /= N;
+          Hmean              /= N;
         }
       }
 
@@ -186,44 +202,66 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
       //
       // eigen1 * eigen2 has units [s^-2] and calving_rate_horizontal
       // [m*s^1] hence, eigen_calving_K has units [m*s]
-      if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
+      if (eigen2 > eigenCalvOffset*fdens and eigen1 > 0.0) {
         // spreading in all directions
-        result(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
+          result(i, j) = Knew * eigen1 * (eigen2 - eigenCalvOffset);
       } else {
-        result(i, j) = 0.0;
+          result(i, j) = 0.0;
       }
 
       ///////////////////////////////////////////////////////////////
       // Fracture calving options
       if (Foption == 1) {
-        if (fdens > 0.0){
+        if (fdens > 0.0 and eigen2 > eigenCalvOffset and eigen1 > 0.0){
           // option 1
           //m_log->message(2, "!!!! fracdens=%f at (%d, %d)\n", fdens, i, j);
           //m_log->message(2, "!!!! eigen calving=%f, additional calving=%f at (%d, %d)\n", result(i, j)*seconds_per_year,F1*fdens, i, j);
           result(i, j) += F1 * fdens / seconds_per_year;
         }
 
-      /////////////////////////////////////////////////////////////////
       } else if (Foption == 2) {
           // option 2
-          result(i, j) = F2a + (F2b - F2a) * fdens / seconds_per_year;
-
-      /////////////////////////////////////////////////////////////////
-      } else if (Foption == 3) {
-          // option 3
-
           if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
             // spreading in all directions
-            result(i, j) = (F3*fdens + Knew) * eigen1 * (eigen2 - eigenCalvOffset);
+            result(i, j) = (Knew + F2 * fdens) * eigen1 * (eigen2 - eigenCalvOffset);
+
           } else {
             result(i, j) = 0.0;
           }
-      } 
+ 
+      } else if (Foption == 3) {
+          // option 3
+          if (eigen2 > eigenCalvOffset and eigen1 > 0.0) {
+            result(i, j) += F3 * 200 * fdens / (Hmean * seconds_per_year);
+          } 
 
+      } else if (Foption == 4) {
+          // option 1b/4
+          if (fdens > 0.0 and eigen2 > eigenCalvOffset*fdens and eigen1 > 0.0){
+            m_log->message(2, "!!!! eigen calving=%f, e1=%.3e, e2=%.3e, fd=%.5f, additional calving=%f at (%d, %d)\n", result(i, j)*seconds_per_year,eigen1,eigen2,fdens,F4*fdens, i, j);
+            result(i, j) += F4 * fdens / seconds_per_year;
+          }
+
+      } else if (Foption == 5) {
+          // option 1b/5
+          if (fdens > 0.0 and eigen1 > 0.0 and (eigen2 > eigenCalvOffset or ftoug > tau0 * exp(-fdens))){
+          result(i, j) += F5 * fdens / seconds_per_year;
+          }
+      }
 
     } else { // end of "if (ice_free_ocean and next_to_floating)"
       result(i, j) = 0.0;
     }
+
+    if (mask.next_to_grounded_ice(i-1, j) || mask.next_to_grounded_ice(i, j+1) || mask.next_to_grounded_ice(i+1, j) || mask.next_to_grounded_ice(i, j-1)) {
+      result(i,j) = 0.0;
+    }
+    //if (mask.floating_ice(i, j) and mask.next_to_grounded_ice(i, j)) {
+    //		result(i, j) = 0.0;
+    //}
+    //if (mask.floating_ice(i-1, j) and  mask.floating_ice(i, j+1) and mask.floating_ice(i+1, j) and mask.floating_ice(i, j-1)) {
+    //	result(i,j) = 0.0;
+    //}
 
   }   // end of loop over grid points
 
