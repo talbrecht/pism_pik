@@ -703,7 +703,7 @@ netcdf pism_config {
     pism_config:grid.lambda_type = "scalar";
     pism_config:grid.lambda_units = "pure number";
 
-    pism_config:grid.max_stencil_width = 2;
+    pism_config:grid.max_stencil_width = 3;
     pism_config:grid.max_stencil_width_doc = "Maximum width of the finite-difference stencil used in PISM.";
     pism_config:grid.max_stencil_width_type = "integer";
     pism_config:grid.max_stencil_width_units = "count";

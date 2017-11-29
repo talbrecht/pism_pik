@@ -35,11 +35,9 @@ FractureCalving::FractureCalving(IceGrid::ConstPtr g,
 
   m_K = m_config->get_double("calving.eigen_calving.K");
 
-
   //const unsigned int stencil_width = m_config->get_double("grid.max_stencil_width");
   calv_rate.create(m_grid, "fracture_calving_rate",
-              WITHOUT_GHOSTS);
-  //              WITH_GHOSTS, stencil_width);
+                   WITHOUT_GHOSTS);
   calv_rate.set_attrs("internal",
                  "potential fracture calving rate",
                  "m year-1", ""); 
@@ -63,6 +61,7 @@ void FractureCalving::init() {
   }
 
   m_strain_rates.set(0.0);
+  calv_rate.set(0.0);
 
 }
 
@@ -110,7 +109,8 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
   using std::max;
 
   // Distance (grid cells) from calving front where strain rate is evaluated
-  int offset = m_stencil_width;
+  int offset = m_stencil_width-1;
+  //int offset = m_config->get_double("grid.max_stencil_width");
 
   //const double eigenCalvOffset = 0.0;
   double eigenCalvOffset = options::Real("-eigen2_offset","critical arch for calving",0.0);
@@ -119,7 +119,6 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
 
   //double seconds_per_year = convert(m_unit_system, 1.0, "year", "seconds");
   double seconds_per_year = 3.15569259747e7;
- 
 
   double Knew = options::Real("-eigen_calving_K","Eigencalving constant used in Fracture Calving",m_K);
 
@@ -131,7 +130,7 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
   double F4 = options::Real("-fracture_calving_K4","Fracture Calving constant 4",0.0);
   double F5 = options::Real("-fracture_calving_K5","Fracture Calving constant 5",0.0);
   m_log->message(2,
-    "* Set fracture calving constants: %.3e, %.3e, %.3e, %.3e, %.3e, %.3e \n", F1, F2, F3, F4, F5);
+    "* Set fracture calving constants: %.3e, %.3e, %.3e, %.3e, %.3e, %d \n", F1, F2, F3, F4, F5, offset);
 
 
   update_strain_rates();
@@ -141,7 +140,6 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
   const IceModelVec2S &T = *m_grid->variables().get_2d_scalar("fracture_toughness");
   
   const IceModelVec2CellType &mask         = *m_grid->variables().get_2d_cell_type("mask");
-
   IceModelVec::AccessList list{&mask, &m_strain_rates, &D, &thk, &T};
   list.add(result);
 
@@ -194,7 +192,6 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
           Hmean              /= N;
         }
       }
-
 
 
       ///////////////////////////////////////////////////////////////
@@ -264,6 +261,7 @@ void FractureCalving::compute_calving_option(IceModelVec2S &result) const{
     //}
 
   }   // end of loop over grid points
+  
 
   //return result;
 }
