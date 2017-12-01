@@ -37,7 +37,7 @@
 namespace pism {
 namespace ocean {
 
-Cavity::Constants::Constants(const Config &config) {
+Pico::Constants::Constants(const Config &config) {
 
   // standard value for Antarctic basin mask
   default_numberOfBasins = static_cast<int>(config.get_double("ocean.pico.number_of_basins"));
@@ -92,22 +92,22 @@ Cavity::Constants::Constants(const Config &config) {
 }
 
 
-const int Cavity::maskfloating = MASK_FLOATING;
-const int Cavity::maskocean    = MASK_ICE_FREE_OCEAN;
-const int Cavity::maskgrounded = MASK_GROUNDED;
+const int Pico::maskfloating = MASK_FLOATING;
+const int Pico::maskocean    = MASK_ICE_FREE_OCEAN;
+const int Pico::maskgrounded = MASK_GROUNDED;
 
 // used in IdentifyMask
-const int Cavity::imask_inner        = 2;
-const int Cavity::imask_outer        = 0;
-const int Cavity::imask_exclude      = 1;
-const int Cavity::imask_unidentified = -1;
+const int Pico::imask_inner        = 2;
+const int Pico::imask_outer        = 0;
+const int Pico::imask_exclude      = 1;
+const int Pico::imask_unidentified = -1;
 
 
 
-Cavity::Cavity(IceGrid::ConstPtr g)
+Pico::Pico(IceGrid::ConstPtr g)
   : PGivenClimate<OceanModifier,OceanModel>(g, NULL) {
 
-  m_option_prefix   = "-ocean_cavity";
+  m_option_prefix   = "-ocean_pico";
 
   // will be de-allocated by the parent's destructor
   m_theta_ocean    = new IceModelVec2T;
@@ -118,7 +118,7 @@ Cavity::Cavity(IceGrid::ConstPtr g)
 
   process_options();
 
-  exicerises_set = options::Bool("-exclude_icerises", "exclude ice rises in ocean cavity model"); 
+  exicerises_set = options::Bool("-exclude_icerises", "exclude ice rises in PICO"); 
 
   std::map<std::string, std::string> standard_names;
   set_vec_parameters(standard_names);
@@ -153,7 +153,7 @@ Cavity::Cavity(IceGrid::ConstPtr g)
 
 
   cbasins.create(m_grid, "basins", WITH_GHOSTS);
-  cbasins.set_attrs("climate_forcing","mask determines basins for ocean cavity model",
+  cbasins.set_attrs("climate_forcing","mask determines basins for PICO",
                     "", "");
   m_variables.push_back(&cbasins);
 
@@ -243,20 +243,20 @@ Cavity::Cavity(IceGrid::ConstPtr g)
 
 
   // Initialize this early so that we can check the validity of the "basins" mask read from a file
-  // in Cavity::init_impl(). This number is hard-wired, so I don't think it matters that it did not
-  // come from Cavity::Constants.
+  // in Pico::init_impl(). This number is hard-wired, so I don't think it matters that it did not
+  // come from Pico::Constants.
   numberOfBasins = 20;
 }
 
-Cavity::~Cavity() {
+Pico::~Pico() {
   // empty
 }
 
-void Cavity::init_impl() {
+void Pico::init_impl() {
 
   m_t = m_dt = GSL_NAN;  // every re-init restarts the clock
 
-  m_log->message(2, "* Initializing the Potsdam Cavity Model for the ocean ...\n");
+  m_log->message(2, "* Initializing the Potsdam Ice-shelf Cavity mOdel for the ocean ...\n");
 
   m_theta_ocean->init(m_filename, m_bc_period, m_bc_reference_time);
   m_salinity_ocean->init(m_filename, m_bc_period, m_bc_reference_time);
@@ -289,24 +289,24 @@ void Cavity::init_impl() {
 
 }
 
-void Cavity::shelf_base_temperature_impl(IceModelVec2S &result) const {
+void Pico::shelf_base_temperature_impl(IceModelVec2S &result) const {
   result.copy_from(m_shelfbtemp);
 }
 
-void Cavity::shelf_base_mass_flux_impl(IceModelVec2S &result) const {
+void Pico::shelf_base_mass_flux_impl(IceModelVec2S &result) const {
   result.copy_from(m_shelfbmassflux);
 }
 
-void Cavity::sea_level_elevation_impl(double &result) const {
+void Pico::sea_level_elevation_impl(double &result) const {
   result = m_sea_level;
 }
 
-void Cavity::melange_back_pressure_fraction_impl(IceModelVec2S &result) const {
+void Pico::melange_back_pressure_fraction_impl(IceModelVec2S &result) const {
   result.set(0.0);
 }
 
 
-void Cavity::define_model_state_impl(const PIO &output) const {
+void Pico::define_model_state_impl(const PIO &output) const {
   
   cbasins.define(output);
   ocean_box_mask.define(output);
@@ -319,7 +319,7 @@ void Cavity::define_model_state_impl(const PIO &output) const {
   OceanModel::define_model_state_impl(output);
 }
 
-void Cavity::write_model_state_impl(const PIO &output) const {
+void Pico::write_model_state_impl(const PIO &output) const {
   
   cbasins.write(output);
   ocean_box_mask.write(output);
@@ -344,7 +344,7 @@ void Cavity::write_model_state_impl(const PIO &output) const {
 //! continental_shelf_depth: threshold for definition of continental shelf area
 //!                          area shallower than threshold is used for ocean input
 
-void Cavity::initBasinsOptions(const Constants &cc) {
+void Pico::initBasinsOptions(const Constants &cc) {
 
   m_log->message(5, "starting initBasinOptions\n");
 
@@ -375,7 +375,7 @@ void Cavity::initBasinsOptions(const Constants &cc) {
 
 }
 
-void Cavity::update_impl(double my_t, double my_dt) {
+void Pico::update_impl(double my_t, double my_dt) {
 
   // Make sure that sea water salinity and sea water potential
   // temperature fields are up to date:
@@ -413,7 +413,7 @@ void Cavity::update_impl(double my_t, double my_dt) {
 }
 
 // To be used solely in round_basins()
-double Cavity::most_frequent_element(const std::vector<double> &v)
+double Pico::most_frequent_element(const std::vector<double> &v)
   {   // Precondition: v is not empty
       std::map<double, double> frequencyMap;
       int maxFrequency = 0;
@@ -436,7 +436,7 @@ double Cavity::most_frequent_element(const std::vector<double> &v)
 //! Basin mask can have non-integer values from PISM regridding for points that lie at
 //! basin boundaries.
 //! Find such point here and set them to the integer value that is most frequent next to it.
-void Cavity::round_basins() {
+void Pico::round_basins() {
 
   // FIXME: THIS routine should be applied once in init, and roundbasins should
   // be stored as field (assumed the basins do not change with time).
@@ -486,7 +486,7 @@ void Cavity::round_basins() {
 //! lakes: subglacial lakes without access to the ocean
 //! We here use a search algorithm, starting at the center or the boundary of the domain.
 //! We iteratively look for regions which satisfy one of the three types named above.
-void Cavity::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
+void Pico::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
 
   m_log->message(5, "starting identifyMASK routine\n");
 
@@ -587,7 +587,7 @@ void Cavity::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
 
 // FIXME, this is ugly code, would be nicer and faster to use a breadth/depth first search here 
 // some attempt made below, but I do not know how to access the neighboring Points...
-void Cavity::identify_shelf_mask() {
+void Pico::identify_shelf_mask() {
 
   m_log->message(5, "starting identify_shelf_mask routine \n");
 
@@ -780,7 +780,7 @@ void Cavity::identify_shelf_mask() {
 //! We use dummy ocean data if no such average can be calculated.
 //!
 
-void Cavity::compute_ocean_input_per_basin(const Constants &cc) {
+void Pico::compute_ocean_input_per_basin(const Constants &cc) {
 
   m_log->message(5, "starting compute_ocean_input_per_basin routine \n");
 
@@ -862,7 +862,7 @@ void Cavity::compute_ocean_input_per_basin(const Constants &cc) {
 //! Ice holes within the shelf are treated like ice shelf cells,
 //! if exicerises_set, also ice rises are treated like ice shelf cells.
 
-void Cavity::compute_distances() {
+void Pico::compute_distances() {
 
   m_log->message(5, "starting compute_distances routine\n");
 
@@ -1020,7 +1020,7 @@ void Cavity::compute_distances() {
 //! Use a relative distance to the grounding line determine the ocean_box_mask
 //! Finally, compute the extent of each ocean box in each basin.
 
-void Cavity::identify_ocean_box_mask(const Constants &cc) {
+void Pico::identify_ocean_box_mask(const Constants &cc) {
 
   m_log->message(5, "starting identify_ocean_box_mask routine\n");
 
@@ -1172,7 +1172,7 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
 //! Toc_box0 and Soc_box0 were computed in function compute_ocean_input_per_basin.
 //! We enforce that Toc_box0 is always at least the local pressure melting point.
 
-void Cavity::set_ocean_input_fields(const Constants &cc) {
+void Pico::set_ocean_input_fields(const Constants &cc) {
 
   m_log->message(5, "starting set_ocean_input_fields routine\n");
 
@@ -1273,7 +1273,7 @@ void Cavity::set_ocean_input_fields(const Constants &cc) {
 //! We here calculate basal melt rate, ambient ocean temperature and salinity
 //! and overturning within box1. We calculate the average over the box 1 input for box 2.
 
-void Cavity::calculate_basal_melt_box1(const Constants &cc) {
+void Pico::calculate_basal_melt_box1(const Constants &cc) {
 
   m_log->message(5, "starting basal calculate_basal_melt_box1 routine\n");
 
@@ -1439,7 +1439,7 @@ void Cavity::calculate_basal_melt_box1(const Constants &cc) {
 //! Overturning is only calculated for box 1.
 //! We calculate the average values over box i as input for box i+1.
 
-void Cavity::calculate_basal_melt_other_boxes(const Constants &cc) {
+void Pico::calculate_basal_melt_other_boxes(const Constants &cc) {
 
   m_log->message(5, "starting calculate_basal_melt_other_boxes routine\n");
 
@@ -1597,7 +1597,7 @@ void Cavity::calculate_basal_melt_other_boxes(const Constants &cc) {
 //! Also set basal melt rate to zero if shelf_id is zero, which is mainly
 //! at the computational domain boundary.
 
-void Cavity::calculate_basal_melt_missing_cells(const Constants &cc) {
+void Pico::calculate_basal_melt_missing_cells(const Constants &cc) {
 
   m_log->message(5, "starting calculate_basal_melt_missing_cells routine\n");
 
@@ -1657,7 +1657,7 @@ void Cavity::calculate_basal_melt_missing_cells(const Constants &cc) {
 
 }
 // Write diagnostic variables to extra files if requested
-std::map<std::string, Diagnostic::Ptr> Cavity::diagnostics_impl() const {
+std::map<std::string, Diagnostic::Ptr> Pico::diagnostics_impl() const {
 
   std::map<std::string, Diagnostic::Ptr> result = OceanModel::diagnostics_impl();
 

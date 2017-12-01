@@ -44,7 +44,7 @@ Factory::Factory(IceGrid::ConstPtr g)
   add_model<PIK>("pik");
   add_model<Constant>("constant");
   add_model<Given>("given");
-  add_model<Cavity>("cavity");
+  add_model<Pico>("pico");
   set_default("constant");
 
   add_modifier<Cache>("cache");

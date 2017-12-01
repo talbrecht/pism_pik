@@ -17,8 +17,8 @@
 // along with PISM; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-#ifndef _POCAVITY_H_
-#define _POCAVITY_H_
+#ifndef _POPICO_H_
+#define _POPICO_H_
 
 #include "pism/coupler/OceanModel.hh"
 
@@ -33,10 +33,10 @@ namespace ocean {
 //! Generalizes the two dimensional ocean box model of [@ref OlbersHellmer2010] for
 //! use in PISM, i.e. three dimensions.
 //!
-class Cavity : public PGivenClimate<OceanModifier,OceanModel> {
+class Pico : public PGivenClimate<OceanModifier,OceanModel> {
 public:
-  Cavity(IceGrid::ConstPtr g);
-  virtual ~Cavity();
+  Pico(IceGrid::ConstPtr g);
+  virtual ~Pico();
 
   class Constants {
   public:
@@ -143,4 +143,4 @@ private:
 } // end of namespace ocean
 } // end of namespace pism
 
-#endif /* _POCAVITY_H_ */
+#endif /* _POPICO_H_ */
