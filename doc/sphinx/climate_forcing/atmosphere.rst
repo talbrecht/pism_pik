@@ -234,10 +234,13 @@ elevation lapse rates. It uses the following options.
 
   .. math::
 
-    \gamma = -\frac{dT}{dz}.
+    \gamma_T = -\frac{dT}{dz}.
 
 - :opt:`-precip_lapse_rate` gives the precipitation lapse rate, in `(m/year)/km`.
-  Here `\gamma = -\frac{dM}{dz}`.
+  Here `\gamma_M = -\frac{dM}{dz}`.
+- :opt:`-precip_lapse_scaling -precip_scale_factor` overrides the linear by an exponential precipitation 
+  lapse rate in units `km^{-1}` associated with the Clausius Clapeyron law, such that 
+  `M = M_{ref} \cdot \exp(\gamma_{M_{sc}} \cdot (h-h_{ref}))`, where `h_{ref}` is the reference surface elevation and `M_{ref}` the respective input surface mass balance. A value of `\gamma_{M_{sc}} = \log(2)/10 \,K^{-1} \cdot 8.0 \,K/km = 0.554 \,km^{-1}` has been used in deConto and Pollard :cite:`deContoPollard2016`
 - :opt:`-atmosphere_lapse_rate_file` specifies a file containing the reference surface
   elevation field (standard name: :var:`surface_altitude`). This file may contain several
   surface elevation records to use lapse rate corrections relative to a time-dependent
