@@ -139,12 +139,12 @@ void TemperatureIndexITM::init_impl() {
   // initializing the model state
   InputOptions input = process_input_options(m_grid->com);
 
-  std::string firn_file = m_config->get_string("surface.itm.firn_depth_file");
+  std::string firn_file = m_config->get_string("surface.pdd.firn_depth_file");
 
   if (input.type == INIT_RESTART) {
     if (not firn_file.empty()) {
       throw RuntimeError::formatted(PISM_ERROR_LOCATION,
-                                    "surface.itm.firn_depth_file is not allowed when"
+                                    "surface.pdd.firn_depth_file is not allowed when"
                                     " re-starting from a PISM output file.");
     }
 
@@ -192,7 +192,7 @@ MaxTimestep TemperatureIndexITM::max_timestep_impl(double my_t) const {
 double TemperatureIndexITM::compute_next_balance_year_start(double time) {
   // compute the time corresponding to the beginning of the next balance year
   double
-    balance_year_start_day = m_config->get_double("surface.itm.balance_year_start_day"),
+    balance_year_start_day = m_config->get_double("surface.pdd.balance_year_start_day"),
     one_day                = units::convert(m_sys, 1.0, "days", "seconds"),
     year_start             = m_grid->ctx()->time()->calendar_year_start(time),
     balance_year_start     = year_start + (balance_year_start_day - 1.0) * one_day;
@@ -204,7 +204,6 @@ double TemperatureIndexITM::compute_next_balance_year_start(double time) {
 }
 
 void TemperatureIndexITM::update_impl(double t, double dt) {
-
   if ((fabs(t - m_t) < 1e-12) &&
       (fabs(dt - m_dt) < 1e-12)) {
     return;
@@ -220,21 +219,23 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
   int N = m_mbscheme->get_timeseries_length(dt);
 
   const double dtseries = dt / N;
+  m_log->message(2, //FIXME: test
+                   "* update_impl\n"
+                   "  dtseries =  %f, N = %d\n", dtseries, N);
   std::vector<double> ts(N), T(N), P(N);
   double ITM_melt = 0.;
   for (int k = 0; k < N; ++k) {
     ts[k] = t + k * dtseries;
   }
 
-  double insolation = 1.;
+  double insolation = 900.;
   double surface_elevation = 0.;
 
   const IceModelVec2CellType &mask = *m_grid->variables().get_2d_cell_type("mask");
 
-  IceModelVec::AccessList list{&mask, &m_air_temp_sd, &m_climatic_mass_balance,
-      &m_firn_depth, &m_snow_depth, &m_accumulation, &m_melt, &m_runoff}; 
-  //TODO : include surface altitude. 
 
+  IceModelVec::AccessList list{&mask, &m_climatic_mass_balance, &m_firn_depth, &m_snow_depth, &m_accumulation, &m_melt, &m_runoff}; 
+  //TODO : include surface altitude. 
 
   const double melt_conversion_factor   = m_melt_conversion_factor ; // aus config oben.
 
@@ -243,12 +244,17 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
   m_atmosphere->begin_pointwise_access();
 
   const double ice_density = m_config->get_double("constants.ice.density");
-
   ParallelSection loop(m_grid->com);
   try {
     for (Points p(*m_grid); p; p.next()) {
       const int i = p.i(), j = p.j();
 
+      //m_log->message(2, "i = %d, j = %d\n",i,j); //FIXME
+      if (i == 15 && j == 15 ){
+      m_log->message(2, //FIXME: test
+             "* get old model parameters \n"
+             "  m_accumulation = %f, m_melt = %f, m_runoff = %f, m_climatic_mass_balance = %f\n",m_accumulation(i,j), m_melt(i, j), m_runoff(i, j), m_climatic_mass_balance(i, j));
+      }
       // reset total accumulation, melt, and runoff, and SMB
       {
         m_accumulation(i, j)          = 0.0;
@@ -256,7 +262,6 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
         m_runoff(i, j)                = 0.0;
         m_climatic_mass_balance(i, j) = 0.0;
       }
-
       // the temperature time series from the AtmosphereModel and its modifiers
       m_atmosphere->temp_time_series(i, j, T);
 
@@ -291,11 +296,24 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
           const double accumulation = P[k] * dtseries;
 
           // get albedo
+          if (i == 15 && j == 15 ){
+          m_log->message(2, //FIXME: test
+                 "  accumulation = %f\n",accumulation,
+                 "* get albedo \n",
+                 "  m_melt = %f, m_snow_depth = %f, m_firn_depth = %f, mask = %f\n",m_melt(i, j), m_snow_depth(i, j), m_firn_depth(i, j), mask(i, j));
+          }
           double albedo = m_mbscheme->get_albedo(m_melt(i, j), m_snow_depth(i, j), m_firn_depth(i, j), mask(i, j));
+          if (i == 15 && j == 15 ){
+          m_log->message(2, //FIXME: test
+                 "* get albedo \n"
+                 "  albedo = %f\n", albedo);}
 
           // compute melt
           ITM_melt = m_mbscheme->calculate_ITM_melt(dtseries, insolation, T[k], surface_elevation, albedo);
-
+          if (i == 15 && j == 15 ){
+          m_log->message(2, //FIXME: test
+                 "* get ITM_melt = %f \n",ITM_melt
+                 );}
           // compute changes in snow, firn, etc. 
           LocalMassBalanceITM::Changes changes;
           changes = m_mbscheme->step(melt_conversion_factor, m_refreeze_fraction, ITM_melt, m_firn_depth(i, j), m_snow_depth(i, j), accumulation);
@@ -304,7 +322,11 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
           m_firn_depth(i, j) += changes.firn_depth;
           // update snow depth
           m_snow_depth(i, j) += changes.snow_depth;
-
+          if (i == 15 && j == 15 ){
+          m_log->message(2, //FIXME: test
+                 "* firn_depth = %f, snow_depth = %f\n",m_firn_depth(i, j),m_snow_depth(i,j),
+                 "* changes.firn_depth = %f, changes.snow_depth = %f\n",changes.firn_depth, changes.snow_depth
+                 );}
           // update total accumulation, melt, and runoff, converting from "meters, ice equivalent"
           // to "kg / meter^2"
           {
@@ -332,6 +354,7 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
   m_atmosphere->end_pointwise_access();
 
   m_next_balance_year_start = compute_next_balance_year_start(m_grid->ctx()->time()->current());
+
 }
 
 void TemperatureIndexITM::mass_flux_impl(IceModelVec2S &result) const {

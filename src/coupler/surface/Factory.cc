@@ -27,6 +27,7 @@
 #include "StuffAsAnomaly.hh"
 #include "Delta_T.hh"
 #include "TemperatureIndex.hh"
+#include "TemperatureIndexITM.hh"
 #include "Simple.hh"
 #include "ConstantPIK.hh"
 #include "ForceThickness.hh"
@@ -43,6 +44,7 @@ Factory::Factory(IceGrid::ConstPtr  g)
   add_model<Elevation>("elevation");
   add_model<Given>("given");
   add_model<TemperatureIndex>("pdd");
+  add_model<TemperatureIndexITM>("itm");
   add_model<PIK>("pik");
   add_model<Simple>("simple");
   set_default("given");

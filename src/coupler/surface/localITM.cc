@@ -23,6 +23,7 @@
 #include <gsl/gsl_math.h>       // M_PI
 #include <cmath>                // for erfc() in CalovGreveIntegrand()
 #include <algorithm>
+#include <iostream>
 
 #include "pism/util/pism_const.hh"
 #include "pism/util/ConfigInterface.hh"
@@ -137,12 +138,12 @@ double ITMMassBalance::calculate_ITM_melt(double dt_series,
                                          double &albedo) {
   double ITM_melt = 0.;
 
-  const double rho_w = 1.;    // mass density of water
-  const double L_m = 1.;      // latent heat of ice melting
+  const double rho_w = 1e3;    // mass density of water
+  const double L_m = 3.35e5;      // latent heat of ice melting
   double z = 1.;               // surface elevation
-  double tau_a = 1. +  1. * z;  // transmissivity of the atmosphere, linear fit, plug in values
-  const double itm_c = 1.;
-  const double itm_lambda = 1.; 
+  double tau_a = 0.46 +  0.00006 * z;  // transmissivity of the atmosphere, linear fit, plug in values
+  const double itm_c = -55.;
+  const double itm_lambda = 10.; 
 
   assert(dt_series > 0.0);
 

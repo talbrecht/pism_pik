@@ -339,7 +339,6 @@ double TemperatureIndex::compute_next_balance_year_start(double time) {
 }
 
 void TemperatureIndex::update_impl(double t, double dt) {
-
   if ((fabs(t - m_t) < 1e-12) &&
       (fabs(dt - m_dt) < 1e-12)) {
     return;
@@ -371,6 +370,7 @@ void TemperatureIndex::update_impl(double t, double dt) {
   }
 
   const IceModelVec2CellType &mask = *m_grid->variables().get_2d_cell_type("mask");
+
 
   IceModelVec::AccessList list{&mask, &m_air_temp_sd, &m_climatic_mass_balance,
       &m_firn_depth, &m_snow_depth, &m_accumulation, &m_melt, &m_runoff};
