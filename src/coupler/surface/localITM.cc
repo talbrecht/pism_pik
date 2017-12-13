@@ -136,6 +136,9 @@ double ITMMassBalance::calculate_ITM_melt(double dt_series,
                                          const double &T,
                                          double &surface_elevation,
                                          double &albedo) {
+
+
+  std::cout << "inside calculate_ITM_melt\n";
   double ITM_melt = 0.;
 
   const double rho_w = 1e3;    // mass density of water
@@ -174,6 +177,8 @@ double ITMMassBalance::calculate_ITM_melt(double dt_series,
  */
 void ITMMassBalance::get_snow_accumulation(const std::vector<double> &T,
                                            std::vector<double> &P) {
+
+  std::cout << "inside get_snow_accumulation\n";
 
   assert(T.size() == P.size());
   const size_t N = T.size();
@@ -222,6 +227,8 @@ ITMMassBalance::Changes ITMMassBalance::step(const double &melt_conversion_facto
                                              double old_firn_depth,
                                              double old_snow_depth,
                                              double accumulation) {
+
+  std::cout << "inside ITMMassBalance\n";
 
   Changes result;
 

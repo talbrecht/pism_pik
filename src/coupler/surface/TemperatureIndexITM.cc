@@ -219,9 +219,7 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
   int N = m_mbscheme->get_timeseries_length(dt);
 
   const double dtseries = dt / N;
-  m_log->message(2, //FIXME: test
-                   "* update_impl\n"
-                   "  dtseries =  %f, N = %d\n", dtseries, N);
+
   std::vector<double> ts(N), T(N), P(N);
   double ITM_melt = 0.;
   for (int k = 0; k < N; ++k) {
@@ -249,12 +247,12 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
     for (Points p(*m_grid); p; p.next()) {
       const int i = p.i(), j = p.j();
 
-      //m_log->message(2, "i = %d, j = %d\n",i,j); //FIXME
-      if (i == 15 && j == 15 ){
+      // m_log->message(2, "i = %d, j = %d, mask = %f\n",i,j,mask(i,j)); //FIXME
+      if (i == 108 && j == 48 ){
       m_log->message(2, //FIXME: test
              "* get old model parameters \n"
              "  m_accumulation = %f, m_melt = %f, m_runoff = %f, m_climatic_mass_balance = %f\n",m_accumulation(i,j), m_melt(i, j), m_runoff(i, j), m_climatic_mass_balance(i, j));
-      }
+      
       // reset total accumulation, melt, and runoff, and SMB
       {
         m_accumulation(i, j)          = 0.0;
@@ -296,24 +294,22 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
           const double accumulation = P[k] * dtseries;
 
           // get albedo
-          if (i == 15 && j == 15 ){
+          
           m_log->message(2, //FIXME: test
-                 "  accumulation = %f\n",accumulation,
-                 "* get albedo \n",
-                 "  m_melt = %f, m_snow_depth = %f, m_firn_depth = %f, mask = %f\n",m_melt(i, j), m_snow_depth(i, j), m_firn_depth(i, j), mask(i, j));
-          }
+                 "  accumulation = %f\n m_melt = %f, m_snow_depth = %f, m_firn_depth = %f, mask = %f\n",accumulation,m_melt(i, j), m_snow_depth(i, j), m_firn_depth(i, j), mask(i, j));
+          
           double albedo = m_mbscheme->get_albedo(m_melt(i, j), m_snow_depth(i, j), m_firn_depth(i, j), mask(i, j));
-          if (i == 15 && j == 15 ){
+          
           m_log->message(2, //FIXME: test
                  "* get albedo \n"
-                 "  albedo = %f\n", albedo);}
+                 "  albedo = %f\n", albedo);
 
           // compute melt
           ITM_melt = m_mbscheme->calculate_ITM_melt(dtseries, insolation, T[k], surface_elevation, albedo);
-          if (i == 15 && j == 15 ){
+
           m_log->message(2, //FIXME: test
-                 "* get ITM_melt = %f \n",ITM_melt
-                 );}
+                 "* calculate ITM_melt = %f \n",ITM_melt
+                 );
           // compute changes in snow, firn, etc. 
           LocalMassBalanceITM::Changes changes;
           changes = m_mbscheme->step(melt_conversion_factor, m_refreeze_fraction, ITM_melt, m_firn_depth(i, j), m_snow_depth(i, j), accumulation);
@@ -322,11 +318,10 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
           m_firn_depth(i, j) += changes.firn_depth;
           // update snow depth
           m_snow_depth(i, j) += changes.snow_depth;
-          if (i == 15 && j == 15 ){
+
           m_log->message(2, //FIXME: test
-                 "* firn_depth = %f, snow_depth = %f\n",m_firn_depth(i, j),m_snow_depth(i,j),
-                 "* changes.firn_depth = %f, changes.snow_depth = %f\n",changes.firn_depth, changes.snow_depth
-                 );}
+                 "* firn_depth = %f, snow_depth = %f\n* changes.firn_depth = %f, changes.snow_depth = %f\n",m_firn_depth(i, j),m_snow_depth(i,j),changes.firn_depth, changes.snow_depth
+                 );
           // update total accumulation, melt, and runoff, converting from "meters, ice equivalent"
           // to "kg / meter^2"
           {
@@ -345,6 +340,7 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
         m_firn_depth(i,j) = 0.0;  // no firn over the ocean
         m_snow_depth(i,j) = 0.0;  // snow over the ocean does not stick
       }
+    }//FIXME remove this one. 
     }
   } catch (...) {
     loop.failed();
