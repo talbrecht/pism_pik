@@ -204,6 +204,7 @@ double TemperatureIndexITM::compute_next_balance_year_start(double time) {
 }
 
 void TemperatureIndexITM::update_impl(double t, double dt) {
+  m_log->message(2, "here, right at begining of update_impl\n");//FIXME
   if ((fabs(t - m_t) < 1e-12) &&
       (fabs(dt - m_dt) < 1e-12)) {
     return;
@@ -217,8 +218,10 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
 
   // set up air temperature and precipitation time series
   int N = m_mbscheme->get_timeseries_length(dt);
+  m_log->message(2, "N = %d \n",N); //FIXME
 
   const double dtseries = dt / N;
+  m_log->message(2, "dtseries = %d \n",dtseries); //FIXME
 
   std::vector<double> ts(N), T(N), P(N);
   double ITM_melt = 0.;
@@ -243,14 +246,15 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
 
   const double ice_density = m_config->get_double("constants.ice.density");
   ParallelSection loop(m_grid->com);
+  m_log->message(2, "here, right before loop\n"); //FIXME
   try {
     for (Points p(*m_grid); p; p.next()) {
       const int i = p.i(), j = p.j();
 
-      m_log->message(2, "i = %d, j = %d, mask = %f\n",i,j,mask(i,j)); //FIXME
-      if (i == 100 && j == 48 ){
+      // m_log->message(2, "i = %d, j = %d, mask = %f\n",i,j,mask(i,j)); //FIXME
+      // // if (i == 100 && j == 48 ){
 
-      m_log->message(2, "*****************************************\n\ni = %d, j = %d, mask = %f\n",i,j,mask(i,j)); //FIXME
+      // m_log->message(2, "*****************************************\n\ni = %d, j = %d, mask = %f\n",i,j,mask(i,j)); //FIXME
       // m_log->message(2, //FIXME: test
       //        "* get old model parameters \n"
       //        "  m_accumulation = %f, m_melt = %f, m_runoff = %f, m_climatic_mass_balance = %f\n",m_accumulation(i,j), m_melt(i, j), m_runoff(i, j), m_climatic_mass_balance(i, j));
@@ -343,45 +347,52 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
         m_firn_depth(i,j) = 0.0;  // no firn over the ocean
         m_snow_depth(i,j) = 0.0;  // snow over the ocean does not stick
       }
-           m_log->message(2,"here\n");
-    }//FIXME remove this one. 
+           // m_log->message(2,"here\n");
+    // }//FIXME remove this one. 
     }
   } catch (...) {
     loop.failed();
   }
   loop.check();
-
+  m_log->message(2,"here, right after loop\n");
   m_atmosphere->end_pointwise_access();
 
   m_next_balance_year_start = compute_next_balance_year_start(m_grid->ctx()->time()->current());
-
+  m_log->message(2, "end of update_impl\n"); //FIXME
 }
 
 void TemperatureIndexITM::mass_flux_impl(IceModelVec2S &result) const {
+  m_log->message(2, "mass_flux_impl \n"); //FIXME
   result.copy_from(m_climatic_mass_balance);
 }
 
 void TemperatureIndexITM::temperature_impl(IceModelVec2S &result) const {
+  m_log->message(2, "temperature_impl \n"); //FIXME
   m_atmosphere->mean_annual_temp(result);
 }
 
 const IceModelVec2S& TemperatureIndexITM::accumulation() const {
+  m_log->message(2, "sccumulation \n"); //FIXME
   return m_accumulation;
 }
 
 const IceModelVec2S& TemperatureIndexITM::melt() const {
+  m_log->message(2, "melt \n"); //FIXME
   return m_melt;
 }
 
 const IceModelVec2S& TemperatureIndexITM::runoff() const {
+  m_log->message(2, "runoff \n"); //FIXME
   return m_runoff;
 }
 
 const IceModelVec2S& TemperatureIndexITM::firn_depth() const {
+  m_log->message(2, "firn_depth \n"); //FIXME
   return m_firn_depth;
 }
 
 const IceModelVec2S& TemperatureIndexITM::snow_depth() const {
+  m_log->message(2, "snow_depth \n"); //FIXME
   return m_snow_depth;
 }
 
@@ -393,6 +404,7 @@ void TemperatureIndexITM::define_model_state_impl(const PIO &output) const {
 }
 
 void TemperatureIndexITM::write_model_state_impl(const PIO &output) const {
+  m_log->message(2, "here, in write model state \n"); //FIXME
   SurfaceModel::write_model_state_impl(output);
   m_firn_depth.write(output);
   m_snow_depth.write(output);
