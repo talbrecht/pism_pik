@@ -44,7 +44,7 @@ public:
   const IceModelVec2S& firn_depth() const;
   const IceModelVec2S& snow_depth() const;
   // these represent totals (not rates) over the time step
-  const IceModelVec2S& air_temp_sd() const;
+  //const IceModelVec2S& itm_air_temp_sd() const;
   const IceModelVec2S& accumulation() const;
   const IceModelVec2S& melt() const;
   const IceModelVec2S& runoff() const;

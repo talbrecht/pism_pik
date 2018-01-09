@@ -221,7 +221,7 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
   m_log->message(2, "N = %d \n",N); //FIXME
 
   const double dtseries = dt / N;
-  m_log->message(2, "dtseries = %d \n",dtseries); //FIXME
+  m_log->message(2, "dtseries = %f \n",dtseries); //FIXME
 
   std::vector<double> ts(N), T(N), P(N);
   double ITM_melt = 0.;
@@ -326,9 +326,8 @@ void TemperatureIndexITM::update_impl(double t, double dt) {
           // update snow depth
           m_snow_depth(i, j) += changes.snow_depth;
 
-          // m_log->message(2, //FIXME: test
-          //        "* firn_depth = %f, snow_depth = %f\n* changes.firn_depth = %f, changes.snow_depth = %f\n",m_firn_depth(i, j),m_snow_depth(i,j),changes.firn_depth, changes.snow_depth
-          //        );
+          //m_log->message(2, //FIXME: test
+          //        "* firn_depth = %e, snow_depth = %e\n* changes.firn_depth = %e, changes.snow_depth = %e\n",m_firn_depth(i, j),m_snow_depth(i,j),changes.firn_depth, changes.snow_depth);
           // update total accumulation, melt, and runoff, converting from "meters, ice equivalent"
           // to "kg / meter^2"
           {
@@ -413,10 +412,11 @@ void TemperatureIndexITM::write_model_state_impl(const PIO &output) const {
 namespace diagnostics {
 
 /*! @brief Report surface melt, averaged over the reporting interval */
-class SurfaceMelt : public DiagAverageRate<TemperatureIndexITM>
+class ITM_SurfaceMelt : public DiagAverageRate<TemperatureIndexITM>
 {
+
 public:
-  SurfaceMelt(const TemperatureIndexITM *m)
+  ITM_SurfaceMelt(const TemperatureIndexITM *m)
     : DiagAverageRate<TemperatureIndexITM>(m, "smelt", TOTAL_CHANGE) {
 
     m_vars = {SpatialVariableMetadata(m_sys, "smelt")};
@@ -439,10 +439,10 @@ protected:
 };
 
 /*! @brief Report surface runoff, averaged over the reporting interval */
-class SurfaceRunoff : public DiagAverageRate<TemperatureIndexITM>
+class ITM_SurfaceRunoff : public DiagAverageRate<TemperatureIndexITM>
 {
 public:
-  SurfaceRunoff(const TemperatureIndexITM *m)
+  ITM_SurfaceRunoff(const TemperatureIndexITM *m)
     : DiagAverageRate<TemperatureIndexITM>(m, "srunoff", TOTAL_CHANGE) {
 
     m_vars = {SpatialVariableMetadata(m_sys, "srunoff")};
@@ -465,10 +465,10 @@ protected:
 };
 
 /*! @brief Report accumulation (precipitation minus rain), averaged over the reporting interval */
-class Accumulation : public DiagAverageRate<TemperatureIndexITM>
+class ITM_Accumulation : public DiagAverageRate<TemperatureIndexITM>
 {
 public:
-  Accumulation(const TemperatureIndexITM *m)
+  ITM_Accumulation(const TemperatureIndexITM *m)
     : DiagAverageRate<TemperatureIndexITM>(m, "saccum", TOTAL_CHANGE) {
 
     m_vars = {SpatialVariableMetadata(m_sys, "saccum")};
@@ -496,9 +496,9 @@ std::map<std::string, Diagnostic::Ptr> TemperatureIndexITM::diagnostics_impl() c
   using namespace diagnostics;
 
   std::map<std::string, Diagnostic::Ptr> result = {
-    {"saccum",      Diagnostic::Ptr(new Accumulation(this))},
-    {"smelt",       Diagnostic::Ptr(new SurfaceMelt(this))},
-    {"srunoff",     Diagnostic::Ptr(new SurfaceRunoff(this))},
+    {"saccum",      Diagnostic::Ptr(new ITM_Accumulation(this))},
+    {"smelt",       Diagnostic::Ptr(new ITM_SurfaceMelt(this))},
+    {"srunoff",     Diagnostic::Ptr(new ITM_SurfaceRunoff(this))},
     {"snow_depth",  Diagnostic::Ptr(new ITM_snow_depth(this))},
     {"firn_depth",  Diagnostic::wrap(m_firn_depth)},
   };
