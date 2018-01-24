@@ -323,6 +323,24 @@ const IceModelVec2S & EnergyModel::basal_melt_rate() const {
   return m_basal_melt_rate;
 }
 
+//! \brief Is one of my neighbors below a critical thickness to apply advection		
+//! in enthalpy or temperature equation?		
+bool EnergyModel::checkThinNeigh(const IceModelVec2S &thickness,
+                              int i, int j, double threshold) {
+  const double
+    N  = thickness(i, j + 1),
+    E  = thickness(i + 1, j),
+    S  = thickness(i, j - 1),
+    W  = thickness(i - 1, j),
+    NW = thickness(i - 1, j + 1),
+    SW = thickness(i - 1, j - 1),
+    NE = thickness(i + 1, j + 1),
+    SE = thickness(i + 1, j - 1);
+
+  return ((E < threshold) || (NE < threshold) || (N < threshold) || (NW < threshold) ||
+          (W < threshold) || (SW < threshold) || (S < threshold) || (SE < threshold));
+}
+
 /*! @brief Ice loss "flux" due to ice liquefaction. */
 class LiquifiedIceFlux : public TSDiag<TSFluxDiagnostic,EnergyModel> {
 public:

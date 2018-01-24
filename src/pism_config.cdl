@@ -479,6 +479,11 @@ netcdf pism_config {
     pism_config:energy.temperature_dependent_thermal_conductivity_option = "vark";
     pism_config:energy.temperature_dependent_thermal_conductivity_type = "boolean";
 
+    pism_config:energy.energy_advection_ice_thickness_threshold_units = "meters";
+    pism_config:energy.energy_advection_ice_thickness_threshold_type = "scalar";
+    pism_config:energy.energy_advection_ice_thickness_threshold = 100.0;
+    pism_config:energy.energy_advection_ice_thickness_threshold_doc = "ignore advection and strain heating in ice columns thinner than this";
+
     pism_config:enthalpy_converter.T_reference = 223.15;
     pism_config:enthalpy_converter.T_reference_doc = "= T_0 in enthalpy formulas in :cite:`AschwandenBuelerKhroulevBlatter`";
     pism_config:enthalpy_converter.T_reference_type = "scalar";

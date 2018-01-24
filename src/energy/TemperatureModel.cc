@@ -177,6 +177,8 @@ void TemperatureModel::update_impl(double t, double dt, const Inputs &inputs) {
   //   or bedrock can be lower than surface temperature
   const double bulge_max  = m_config->get_double("energy.enthalpy_cold_bulge_max") / ice_c;
 
+  const double thickness_threshold = m_config->get_double("energy.energy_advection_ice_thickness_threshold");
+
   inputs.check();
   const IceModelVec3
     &strain_heating3 = *inputs.strain_heating3,
@@ -218,13 +220,18 @@ void TemperatureModel::update_impl(double t, double dt, const Inputs &inputs) {
     for (Points p(*m_grid); p; p.next()) {
       const int i = p.i(), j = p.j();
 
+      // if isMarginal then only do vertical conduction for ice; ignore advection		
+      //   and strain heating if isMarginal		
+      const bool isMarginal = checkThinNeigh(ice_thickness, i, j, thickness_threshold);
+
       MaskValue mask = static_cast<MaskValue>(cell_type.as_int(i,j));
 
       const double H = ice_thickness(i, j);
       const double T_surface = ice_surface_temp(i, j);
 
       // false means "don't ignore horizontal advection and strain heating near margins"
-      system.initThisColumn(i, j, false, mask, H);
+      //system.initThisColumn(i, j, false, mask, H);
+      system.initThisColumn(i, j, isMarginal, mask, H);
 
       const int ks = system.ks();
 

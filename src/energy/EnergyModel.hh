@@ -128,6 +128,9 @@ protected:
   virtual void define_model_state_impl(const PIO &output) const = 0;
   virtual void write_model_state_impl(const PIO &output) const = 0;
 
+  virtual bool checkThinNeigh(const IceModelVec2S &thickness,
+                              int i, int j, double threshold);
+
   virtual std::map<std::string, Diagnostic::Ptr> diagnostics_impl() const;
   virtual std::map<std::string, TSDiagnostic::Ptr> ts_diagnostics_impl() const;
 
