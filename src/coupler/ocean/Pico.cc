@@ -34,6 +34,9 @@
 #include "pism/util/Mask.hh"
 #include "pism/util/ConfigInterface.hh"
 
+//#include "pism/util/io/io_helpers.hh"
+//#include "pism/util/pism_utilities.hh"
+
 namespace pism {
 namespace ocean {
 
@@ -113,6 +116,13 @@ Cavity::Cavity(IceGrid::ConstPtr g)
   m_theta_ocean    = new IceModelVec2T;
   m_salinity_ocean = new IceModelVec2T;
 
+
+  initmip_bmb_anomaly = options::Bool("-initmip_bmb_anomaly", "add basal melt rate anomaly to PICO melt rates"); 
+  if (initmip_bmb_anomaly){
+    bmb_anomaly = new IceModelVec2T;
+    m_fields["bmb_anomaly"]     = bmb_anomaly;  
+  }
+
   m_fields["theta_ocean"]     = m_theta_ocean;
   m_fields["salinity_ocean"]  = m_salinity_ocean;
 
@@ -137,6 +147,16 @@ Cavity::Cavity(IceGrid::ConstPtr g)
   m_salinity_ocean->set_attrs("climate_forcing",
                                    "salinity of the adjacent ocean",
                                    "g/kg", "");
+
+  // read a bmb_anomaly field from a file..
+  if (initmip_bmb_anomaly){
+    bmb_anomaly->create(m_grid, "bmb_anomaly");
+    bmb_anomaly->set_attrs("climate_forcing",
+                        "basal mass balance anomaly, created for initMIP Antarctica experiments",
+                        "kg m-2 year-1", "");
+  }
+
+
 
   m_shelfbtemp.create(m_grid, "shelfbtemp", WITHOUT_GHOSTS);
   m_shelfbtemp.set_attrs("climate_forcing",
@@ -262,6 +282,12 @@ void Cavity::init_impl() {
   Constants cc(*m_config);
   initBasinsOptions(cc);
 
+  if (initmip_bmb_anomaly){
+    bmb_anomaly->init(m_filename, m_bc_period, m_bc_reference_time);  
+    //*bmb_anomaly = units::convert(m_sys, bmb_anomaly, "m year-1","m second-1");
+    //bmb_anomaly->scale(cc.rhoi);
+  }
+
   round_basins();
 
   // Range basins_range = cbasins.range();
@@ -374,6 +400,10 @@ void Cavity::update_impl(double my_t, double my_dt) {
   m_theta_ocean->average(m_t, m_dt);
   m_salinity_ocean->average(m_t, m_dt);
 
+  if (initmip_bmb_anomaly){
+    bmb_anomaly->average(m_t, m_dt);  
+  }
+
   Constants cc(*m_config);
 
   // prepare ocean input temperature and salinity per basin
@@ -400,11 +430,33 @@ void Cavity::update_impl(double my_t, double my_dt) {
   m_shelfbmassflux.copy_from(basalmeltrate_shelf); 
   m_shelfbmassflux.scale(cc.rhoi);
 
+
+  if (initmip_bmb_anomaly){
+
+    m_log->message(2, "!!!!! meltrate anomaly from file added to PICO result \n");
+    const IceModelVec2CellType &m_mask = *m_grid->variables().get_2d_cell_type("mask"); 
+
+    IceModelVec::AccessList list;
+    list.add(m_shelfbmassflux); 
+    list.add(*bmb_anomaly);  
+    list.add(m_mask);
+
+    for (Points p(*m_grid); p; p.next()) {
+      const int i = p.i(), j = p.j();
+        if (m_mask(i,j)==maskfloating){
+
+          double mrate_anomaly = units::convert(m_sys, (*bmb_anomaly)(i,j), "m year-1","m second-1");
+          m_shelfbmassflux(i,j) +=  mrate_anomaly;
+        }
+    }
+  }
+
   //Is used only for test purposes...
   bool no_shelfb_melt = options::Bool("-no_shelfb_melt","Sets shelfbmassflux to 0.0");
   if (no_shelfb_melt){
     m_shelfbmassflux.set(0.0);
   }
+
 
 }
 

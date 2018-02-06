@@ -74,6 +74,7 @@ protected:
   std::vector<IceModelVec*> m_variables;
 
   bool   exicerises_set; // FIXME shouldn't this be always used?
+  bool   initmip_bmb_anomaly;
 
 private:
   IceModelVec2S   m_shelfbtemp,
@@ -96,7 +97,8 @@ private:
                   T_pressure_melting;
 
   IceModelVec2T   *m_theta_ocean,
-                  *m_salinity_ocean;
+                  *m_salinity_ocean,
+                  *bmb_anomaly;
 
   void initBasinsOptions(const Constants &constants);
   void round_basins();
