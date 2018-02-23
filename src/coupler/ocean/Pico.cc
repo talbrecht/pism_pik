@@ -17,12 +17,18 @@
 // along with PISM; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
-// Please cite this model as 
+// Please cite this model as:
+// 1. 
 // Antarctic sub-shelf melt rates via PICO
-// R. Reese, T. Albrecht, M. Mengel, X. Asay-Davis, R. Winkelmann 
+// R. Reese, T. Albrecht, M. Mengel, X. Asay-Davis and R. Winkelmann 
 // The Cryosphere Discussions (2017) 
 // DOI: 10.5194/tc-2017-70
-
+//
+// 2.
+// A box model of circulation and melting in ice shelf caverns
+// D. Olbers & H. Hellmer
+// Ocean Dynamics (2010), Volume 60, Issue 1, pp 141–153
+// DOI: 10.1007/s10236-009-0252-z
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_poly.h>
