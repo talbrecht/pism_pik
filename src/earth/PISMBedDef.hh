@@ -60,6 +60,7 @@ protected:
   virtual void apply_topg_offset(const std::string &filename);
 
   void compute_uplift(double dt_beddef);
+
 protected:
   //! time of the last bed deformation update
   double m_t_beddef_last;
@@ -72,6 +73,11 @@ protected:
 
   //! bed uplift rate
   IceModelVec2S m_uplift;
+
+  //! load of the ice (and the ocean)
+  IceModelVec2S m_load;
+
+
 };
 
 class PBNull : public BedDef {

@@ -48,6 +48,11 @@ BedDef::BedDef(IceGrid::ConstPtr g)
                      "m s-1", "tendency_of_bedrock_altitude");
   m_uplift.metadata().set_string("glaciological_units", "mm year-1");
   m_uplift.write_in_glaciological_units = true;
+
+  m_load.create(m_grid, "loadthk", WITH_GHOSTS, WIDE_STENCIL);
+  m_load.set_attrs("model_state", "thickness of load of ice and ocean",
+                   "m", "");
+
 }
 
 BedDef::~BedDef() {
@@ -65,11 +70,13 @@ const IceModelVec2S& BedDef::uplift() const {
 void BedDef::define_model_state_impl(const PIO &output) const {
   m_uplift.define(output);
   m_topg.define(output);
+  m_load.define(output);
 }
 
 void BedDef::write_model_state_impl(const PIO &output) const {
   m_uplift.write(output);
   m_topg.write(output);
+  m_load.write(output);
 }
 
 void BedDef::init(const InputOptions &opts) {
@@ -90,15 +97,27 @@ void BedDef::bootstrap_impl(const IceModelVec2S &bed,
   m_uplift.copy_from(bed_uplift);
   // suppress a compiler warning:
   (void) ice_thickness;
+
+  const IceModelVec2S *load_thickness = m_grid->variables().get_2d_scalar("beddef_load");
+  m_load.copy_from(*load_thickness);
+
 }
 
 void BedDef::update_impl(double t, double dt) {
-  const IceModelVec2S *thk = m_grid->variables().get_2d_scalar("land_ice_thickness");
-  this->update_with_thickness_impl(*thk, t, dt);
+  
+    const IceModelVec2S *load_thickness = m_grid->variables().get_2d_scalar("beddef_load");
+    m_load.copy_from(*load_thickness);
+    this->update_with_thickness_impl(*load_thickness, t, dt);
+    //const IceModelVec2S *thk = m_grid->variables().get_2d_scalar("land_ice_thickness");
+    //this->update_with_thickness_impl(*thk, t, dt);
 }
 
 void BedDef::update(const IceModelVec2S &ice_thickness, double t, double dt) {
-  this->update_with_thickness_impl(ice_thickness, t, dt);
+   
+    // ice_thickness is actually m_beddef_load here called in iceModel.cc 
+    m_load.copy_from(ice_thickness);
+    this->update_with_thickness_impl(ice_thickness, t, dt);
+
 }
 
 //! Initialize from the context (input file and the "variables" database).
@@ -145,6 +164,10 @@ void BedDef::init_impl(const InputOptions &opts) {
 
   // this should be the last thing we do here
   m_topg_last.copy_from(m_topg);
+
+  // write load thickness field to output
+  const IceModelVec2S *load = m_grid->variables().get_2d_scalar("beddef_load");
+  m_load.copy_from(*load);
 }
 
 /*!

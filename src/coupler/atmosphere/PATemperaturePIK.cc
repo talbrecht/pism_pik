@@ -93,6 +93,9 @@ void TemperaturePIK::init_impl() {
   temp_era_interim_sin_set = options::Bool("-temp_era_interim_sin",
     "Near-surface air temperature is parameterized based on ERA INTERIM data with a sin(lat) dependence");
 
+  temp_era_interim_lon_set = options::Bool("-temp_era_interim_lon",
+    "Near-surface air temperature is parameterized based on ERA INTERIM data with a cos(lon) dependence");
+
 
   if (temp_huybrechts_dewolde99_set) {
       m_log->message(2,
@@ -103,7 +106,10 @@ void TemperaturePIK::init_impl() {
   } else if (temp_era_interim_sin_set) {
       m_log->message(2,
              "    Near-surface air temperature is parameterized based on ERA INTERIM data with a sin(lat) dependence.\n");
-  } else {
+  } else if (temp_era_interim_lon_set) {
+      m_log->message(2,
+             "    Near-surface air temperature is parameterized based on ERA INTERIM data with a cos(lon) dependence.\n");
+  }else {
       m_log->message(2,
              "    Near-surface annual mean air temperature is parameterized as in Martin et al. (2011),\n"
              "    and near-surface summer mean air temperature is computed as anomaly to the Huybrechts & De Wolde (1999) - temperature.\n");
@@ -141,7 +147,8 @@ void TemperaturePIK::update_impl(double my_t, double my_dt) {
   // initialize pointers to fields the parameterization depends on:
   const IceModelVec2S
     &h        = *m_grid->variables().get_2d_scalar("surface_altitude"),
-    &lat_degN = *m_grid->variables().get_2d_scalar("latitude");
+    &lat_degN = *m_grid->variables().get_2d_scalar("latitude"),
+    &lon_degE = *m_grid->variables().get_2d_scalar("longitude");
 
   if (lat_degN.metadata().has_attribute("missing_at_bootstrap")) {
     throw RuntimeError(PISM_ERROR_LOCATION, "latitude variable was missing at bootstrap;\n"
@@ -151,8 +158,9 @@ void TemperaturePIK::update_impl(double my_t, double my_dt) {
   IceModelVec::AccessList list;
   list.add(h);
   list.add(lat_degN);
+  list.add(lon_degE);
   list.add(m_air_temp_mean_annual);
-  list.add(m_air_temp_mean_july);
+  list.add(m_air_temp_mean_july); //FIXME: change name to summer, since it is january in Antarctica!
 
   for (Points p(*m_grid); p; p.next()) {
     const int i = p.i(), j = p.j();
@@ -168,7 +176,7 @@ void TemperaturePIK::update_impl(double my_t, double my_dt) {
       //m_air_temp_mean_annual(i,j) = d_ma + gamma_ma * h(i,j) + c_ma * lat_degN(i,j) + kappa_ma * (-lon_degE(i,j));
       //m_air_temp_mean_july(i,j)   = d_mj + gamma_mj * h(i,j) + c_mj * lat_degN(i,j) + kappa_mj * (-lon_degE(i,j));
       m_air_temp_mean_annual(i,j) = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);
-      m_air_temp_mean_july(i,j)   = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0);
+      m_air_temp_mean_july(i,j)   = 273.15 + 16.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0);
     }
 
     else if (temp_era_interim_set){  // parametrization based on multiple regression analysis of ERA INTERIM data
@@ -179,6 +187,11 @@ void TemperaturePIK::update_impl(double my_t, double my_dt) {
       m_air_temp_mean_annual(i,j) = 273.15 - 2.0 -0.0082*h(i,j) + 18.4 * (sin(3.1415*lat_degN(i,j)/180.0)+0.8910)/(1-0.8910);
       m_air_temp_mean_july(i,j)   = 273.15 + 3.2 -0.0067*h(i,j) +  8.3 * (sin(3.1415*lat_degN(i,j)/180.0)+0.8910)/(1-0.8910);
     }
+    else if (temp_era_interim_lon_set){  // parametrization based on multiple regression analysis of ERA INTERIM data with cos(lon)
+      double hmod = std::max(500.0,h(i,j));  //FIXME: if icefree ocean, hmod=0
+      m_air_temp_mean_annual(i,j) = 273.15 + 36.81 -0.00797*hmod -0.688*lat_degN(i,j)*(-1.0) + 2.574*cos(3.1415*(lon_degE(i,j)-110.0)/180.0);
+      m_air_temp_mean_july(i,j)   = 273.15 + 22.58 -0.00940*hmod -0.234*lat_degN(i,j)*(-1.0) + 0.828*cos(3.1415*(lon_degE(i,j)-110.0)/180.0);
+    }
     else {
 
     // annual mean temperature = Martin et al. (2011) parametrization
@@ -186,7 +199,7 @@ void TemperaturePIK::update_impl(double my_t, double my_dt) {
       m_air_temp_mean_annual(i,j) = 273.15 + 30 - 0.0075 * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);  // surface temperature parameterization as in Martin et al. 2011, Eqn. 2.0.2
 
       double TMA = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0); // = TMA, mean annual temperature in Huybrechts & DeWolde (1999)
-      double TMS = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)
+      double TMS = 273.15 + 16.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)
 
       m_air_temp_mean_july(i,j) = m_air_temp_mean_annual(i,j) + (TMS - TMA);
     }

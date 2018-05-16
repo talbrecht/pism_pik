@@ -1,4 +1,4 @@
- // Copyright (C) 2012-2016 Ricarda Winkelmann, Ronja Reese, Torsten Albrecht
+ // Copyright (C) 2012-2017 Ricarda Winkelmann, Ronja Reese, Torsten Albrecht
 // and Matthias Mengel
 //
 // This file is part of PISM.
@@ -16,6 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with PISM; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+//
+// Please cite this model as 
+// Antarctic sub-shelf melt rates via PICO
+// R. Reese, T. Albrecht, M. Mengel, X. Asay-Davis, R. Winkelmann 
+// (subm.)
+
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_poly.h>
@@ -37,14 +43,14 @@ Cavity::Constants::Constants(const Config &config) {
 
   continental_shelf_depth = -800; // threshold between deep ocean and continental shelf
 
-  T_dummy = -1.5 + 273.15; // value for ocean temperature around Antarctica if no other data available FIXME Check
-  S_dummy = 34.5; // value for ocean salinity around Antarctica if no other data available FIXME Check
+  T_dummy = -1.5 + 273.15; // value for ocean temperature around Antarctica if no other data available (cold conditions)
+  S_dummy = 34.7; // value for ocean salinity around Antarctica if no other data available (cold conditions)
 
   earth_grav = config.get_double("constants.standard_gravity");
   rhoi       = config.get_double("constants.ice.density");
   rhow       = config.get_double("constants.sea_water.density");
   rho_star   = 1033;                  // kg/m^3
-  nu         = rhoi / rho_star;       // no unit
+  nu          = rhoi / rhow; // no unit
 
   latentHeat = config.get_double("constants.fresh_water.latent_heat_of_fusion"); //Joule / kg
   c_p_ocean  = 3974.0;       // J/(K*kg), specific heat capacity of ocean mixed layer
@@ -68,8 +74,8 @@ Cavity::Constants::Constants(const Config &config) {
   alpha      = 7.5e-5;       // 1/K
   beta       = 7.7e-4;       // 1/psu
 
-  default_gamma_T    = 2e-5;        // m/s FIXME check!
-  default_overturning_coeff    = 1e6;         // kg−1 s−1 FIXME check!
+  default_gamma_T    = 2e-5;        // m/s, best fit value in paper 
+  default_overturning_coeff    = 1e6;         // kg−1 s−1, best fit value in paper 
 
   // for shelf cells where normal box model is not calculated,
   // used in calculate_basal_melt_missing_cells(), compare POConstantPIK
@@ -106,7 +112,7 @@ Cavity::Cavity(IceGrid::ConstPtr g)
 
   process_options();
 
-  exicerises_set = options::Bool("-exclude_icerises", "exclude ice rises in ocean cavity model"); // FIXME set always?
+  exicerises_set = options::Bool("-exclude_icerises", "exclude ice rises in ocean cavity model"); 
 
   std::map<std::string, std::string> standard_names;
   set_vec_parameters(standard_names);
@@ -165,6 +171,11 @@ Cavity::Cavity(IceGrid::ConstPtr g)
   ocean_mask.set_attrs("model_state", "mask displaying open ocean","", "");
   m_variables.push_back(&ocean_mask);
 
+  // mask displaying subglacial lakes - floating regions with no connection to the ocean
+  lake_mask.create(m_grid, "lake_mask", WITH_GHOSTS);
+  lake_mask.set_attrs("model_state", "mask displaying subglacial lakes","", "");
+  m_variables.push_back(&lake_mask);
+
   // mask with distance (in boxes) to grounding line
   DistGL.create(m_grid, "DistGL", WITH_GHOSTS);
   DistGL.set_attrs("model_state", "mask displaying distance to grounding line","", "");
@@ -206,10 +217,10 @@ Cavity::Cavity(IceGrid::ConstPtr g)
   m_variables.push_back(&overturning);
 
   basalmeltrate_shelf.create(m_grid, "basalmeltrate_shelf", WITHOUT_GHOSTS);
-  basalmeltrate_shelf.set_attrs("model_state", "SIMPEL sub-shelf melt rate", "m/s",
-                                "SIMPEL sub-shelf melt rate");
-  //FIXME unit in field is kg m-2 a-1, but the written unit is m per a
+  basalmeltrate_shelf.set_attrs("model_state", "PICO sub-shelf melt rate", "m/s",
+                                "PICO sub-shelf melt rate");
   basalmeltrate_shelf.metadata().set_string("glaciological_units", "m year-1");
+  basalmeltrate_shelf.write_in_glaciological_units = true;
   m_variables.push_back(&basalmeltrate_shelf);
 
   // TODO: this may be initialized to NA, it should only have valid values below ice shelves.
@@ -281,6 +292,52 @@ void Cavity::sea_level_elevation_impl(double &result) const {
 void Cavity::melange_back_pressure_fraction_impl(IceModelVec2S &result) const {
   result.set(0.0);
 }
+
+
+void Cavity::define_model_state_impl(const PIO &output) const {
+  
+  cbasins.define(output);
+  ocean_box_mask.define(output);
+  icerise_mask.define(output);
+  ocean_contshelf_mask.define(output);
+  ocean_mask.define(output);
+  lake_mask.define(output);
+  DistGL.define(output);
+  DistIF.define(output);
+  Soc.define(output);
+  Soc_box0.define(output);
+  Toc.define(output);
+  Toc_box0.define(output);
+  T_star.define(output);
+  overturning.define(output);
+  basalmeltrate_shelf.define(output);
+  T_pressure_melting.define(output);
+
+  OceanModel::define_model_state_impl(output);
+}
+
+void Cavity::write_model_state_impl(const PIO &output) const {
+  
+  cbasins.write(output);
+  ocean_box_mask.write(output);
+  icerise_mask.write(output);
+  ocean_contshelf_mask.write(output);
+  ocean_mask.write(output);
+  lake_mask.write(output);
+  DistGL.write(output);
+  DistIF.write(output);
+  Soc.write(output);
+  Soc_box0.write(output);
+  Toc.write(output);
+  Toc_box0.write(output);
+  T_star.write(output);
+  overturning.write(output);
+  basalmeltrate_shelf.write(output);
+  T_pressure_melting.write(output);
+
+  OceanModel::define_model_state_impl(output);
+}
+
 
 //! initialize SIMPEL model variables, can be user-defined.
 
@@ -359,6 +416,7 @@ void Cavity::update_impl(double my_t, double my_dt) {
   if (exicerises_set) {
     identifyMASK(icerise_mask,"icerises");}
   identifyMASK(ocean_mask,"ocean");
+  identifyMASK(lake_mask,"lakes");
   round_basins();
   compute_distances();
   identify_ocean_box_mask(cc);
@@ -371,9 +429,8 @@ void Cavity::update_impl(double my_t, double my_dt) {
   calculate_basal_melt_missing_cells(cc);  //Assumes that mass flux is proportional to the shelf-base heat flux.
 
   m_shelfbtemp.copy_from(T_pressure_melting); // in-situ freezing point at the ice shelf base
-  //
-  basalmeltrate_shelf.scale(cc.rhoi);
-  m_shelfbmassflux.copy_from(basalmeltrate_shelf); //TODO Check if scaling with ice density
+  m_shelfbmassflux.copy_from(basalmeltrate_shelf); 
+  m_shelfbmassflux.scale(cc.rhoi);
 
   bool no_shelfb_melt = options::Bool("-no_shelfb_melt","Sets shelfbmassflux to 0.0");
   if (no_shelfb_melt){
@@ -453,6 +510,7 @@ void Cavity::round_basins() {
 //! ocean_continental_shelf: ocean on the continental shelf without detached submarine islands
 //! icerises: grounded ice not connected to the main ice body
 //! ocean: ocean without holes in ice shelves, extends beyond continental shelf
+//! lakes: subglacial lakes without access to the ocean
 //! We here use a search algorithm, starting at the center or the boundary of the domain.
 //! We iteratively look for regions which satisfy one of the three types named above.
 void Cavity::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
@@ -481,8 +539,8 @@ void Cavity::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
   if ((masktype=="ocean_continental_shelf" || masktype=="icerises") && (seed_x >= m_grid->xs()) && (seed_x < m_grid->xs()+m_grid->xm()) && (seed_y >= m_grid->ys())&& (seed_y < m_grid->ys()+m_grid->ym())){
     inputmask(seed_x,seed_y)=imask_inner;
   }
-  else if (masktype=="ocean"){
-    //assume that any point on the domain boundary belongs to the open ocean
+  else if (masktype=="ocean" || masktype=="lakes"){
+    //assume that some point on the domain boundary belongs to the open ocean
     for (Points p(*m_grid); p; p.next()) {
       const int i = p.i(), j = p.j();
       if ((i==0) | (j==0) | (i>(Mx-2)) | (j>(My-2))){
@@ -511,6 +569,9 @@ void Cavity::identifyMASK(IceModelVec2S &inputmask, std::string masktype) {
       }
       else if (masktype=="ocean"){
         masktype_condition = (m_mask(i,j)==maskocean);
+      }
+      else if (masktype=="lakes"){
+        masktype_condition = (m_mask(i,j)==maskocean || m_mask(i,j)==maskfloating);
       }
 
       if (masktype_condition && inputmask(i,j)==imask_unidentified &&
@@ -805,6 +866,9 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
   std::vector<double> lmax_distGL(numberOfBasins);
   std::vector<double> lmax_distIF(numberOfBasins);
 
+  double lmax_distGL_ref = 0.0; 
+  double max_distGL_ref = 0.0; 
+
   const IceModelVec2CellType &m_mask = *m_grid->variables().get_2d_cell_type("mask");
 
   for(int shelf_id=0;shelf_id<numberOfBasins;shelf_id++){ max_distGL[shelf_id]=0.0; max_distIF[shelf_id]=0.0;lmax_distGL[shelf_id]=0.0; lmax_distIF[shelf_id]=0.0;}
@@ -814,6 +878,7 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
   list.add(DistGL);
   list.add(DistIF);
   list.add(ocean_box_mask);
+  list.add(lake_mask);
   list.add(m_mask);
 
   for (Points p(*m_grid); p; p.next()) {
@@ -826,6 +891,9 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
     if ( DistIF(i,j)> lmax_distIF[shelf_id] ) {
       lmax_distIF[shelf_id] = DistIF(i,j);
     }
+    if (DistGL(i,j)>lmax_distGL_ref){
+      lmax_distGL_ref = DistGL(i,j);
+    }
   }
 
 
@@ -833,6 +901,7 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
     max_distGL[l] = GlobalMax(m_grid->com, lmax_distGL[l]);
     max_distIF[l] = GlobalMax(m_grid->com, lmax_distIF[l]);
   }
+  max_distGL_ref = GlobalMax(m_grid->com, lmax_distGL_ref);  
 
   // Compute the number of boxes for each basin
   // based on maximum distance between calving front and grounding line (in DistGL)
@@ -842,14 +911,12 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
   std::vector<int> lnumberOfBoxes_perBasin(numberOfBasins);
 
   int n_min = 1; //
-  double max_distGL_ref = 500000; // meter //FIXME make this an input parameter
   double zeta = 0.5; // hard coded for now
 
   for (int l=0;l<numberOfBasins;l++){
     lnumberOfBoxes_perBasin[l] = 0;
-    // FIXME: this is only correct for same dx and dy spacing.
-    lnumberOfBoxes_perBasin[l] = n_min + static_cast<int>(
-        round(pow((max_distGL[l]*dx/max_distGL_ref), zeta) *(numberOfBoxes-n_min)));
+    lnumberOfBoxes_perBasin[l] = n_min + static_cast<int>( 
+    		round(pow((max_distGL[l]/max_distGL_ref), zeta) *(numberOfBoxes-n_min))); 
     lnumberOfBoxes_perBasin[l] = PetscMin(lnumberOfBoxes_perBasin[l],cc.default_numberOfBoxes);
     m_log->message(5, "lnumberOfBoxes[%d]=%d \n", l, lnumberOfBoxes_perBasin[l]);
   }
@@ -875,7 +942,6 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
         // FIXME: is there a more elegant way to ensure float?
         if ( ((n*1.0-k*1.0-1.0)/(n*1.0) <= pow((1.0-r),2)) && (pow((1.0-r), 2) <= (n*1.0-k*1.0)/n*1.0) ){
 
-
           // ensure that boxnumber of a cell cannot be bigger than the distance to the grounding line
           if (DistGL(i,j) < k+1) {
             ocean_box_mask(i,j) = DistGL(i,j);
@@ -890,11 +956,13 @@ void Cavity::identify_ocean_box_mask(const Constants &cc) {
   } // for
 
   // set all floating cells which have no ocean_box_mask value to numberOfBoxes+1.
+  // do not apply this to cells that are subglacial lakes, 
+  // since they are not accessible for ocean waters and hence should not be treated in this model
   // For these, beckmann-goose melting will be applied, see calculate_basal_melt_missing_cells
   // those are the cells which are not reachable from grounding line or calving front.
   for (Points p(*m_grid); p; p.next()) {
     const int i = p.i(), j = p.j();
-    if (m_mask(i,j)==maskfloating && ocean_box_mask(i,j)==0){ // floating
+    if (m_mask(i,j)==maskfloating && ocean_box_mask(i,j)==0 && lake_mask(i,j)!=1){ // floating, no sub-glacial lake
       ocean_box_mask(i,j) = numberOfBoxes + 1;
     }
 
@@ -959,7 +1027,7 @@ void Cavity::set_ocean_input_fields(const Constants &cc) {
     const int i = p.i(), j = p.j();
 
     // make sure all temperatures are zero at the beginning of each timestep
-    Toc(i,j) = 273.15; // in K //FIXME delete?
+    Toc(i,j) = 273.15; // in K 
     Toc_box0(i,j) = 273.15;  // in K
     Soc_box0(i,j) = 0.0; // in psu
 
@@ -1052,6 +1120,7 @@ void Cavity::calculate_basal_melt_box1(const Constants &cc) {
 
     basalmeltrate_shelf(i,j) = 0.0;
     overturning(i,j) = 0.0;
+    T_pressure_melting(i,j)= 0.0;
 
     if ((ocean_box_mask(i,j) == 1) && (shelf_id > 0.0)){
 
