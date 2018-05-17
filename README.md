@@ -23,9 +23,9 @@ PICO, a model for sub-shelf melt rates
 The **pik/pico_dev** branch is based on the development version [b659de3](https://github.com/pism/pism/commit/80896b36f7444f78923a12d1c57cea47e30a6b08) from Feb 13th, 2017 (after the v0.7 release but before v1.0) 
 and adds an implementation of the Potsdam Ice-Shelf Cavity mOdel 
 
-Code release `pik-pico-07` was used for Reese et al., The Cryosphere (2018), forthcoming.
+Code release `pik-pico-07` was used for Reese et al., The Cryosphere; forthcoming.
 
-For further use of PICO, please refer to the latest version on https://github.com/pism/pism.git.
+For further use of PICO, please refer to the latest version on https://github.com/pism/pism/commits/dev.
 If you make use of PICO, please cite the respective paper and Olbers & Hellmer (2010).
 
 
