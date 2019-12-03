@@ -76,6 +76,7 @@ Want to contribute? Great! See `Committing to PISM <pism-contribute_>`_.
 .. _NASA-MAP: http://map.nasa.gov/
 .. _NASA-Cryosphere: http://ice.nasa.gov/
 .. _NSF-Polar: https://nsf.gov/geo/plr/about.jsp
+.. _pism-rebound: https://github.com/pism/pism/releases/tag/pik-holocene-gl-rebound
 
 ..
    Local Variables:
