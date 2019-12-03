@@ -28,11 +28,12 @@ The pism_pik_1.0 branch is based on the stable version 361b6d from November 8th,
 
 - fix of linear interpolation scheme for changing sea-level height
 - fix of the bed deformation model to exclude changes in ice shelf loads and include changes in the ocean load 
-- improvement of damage formation based on Borstad et al., 2016
+- improvement of damage formation based on `Borstad et al., 2016 <borstad_>`_
 
 .. You find in the examples/paleo-antarctica folder a working example of a paleo spin-up using all added functionality.
 
-Code release v1.0-paleo-ensemble was used for ``Glacial cycles simulation of the Antarctic Ice Sheet with PISM`` in Albrecht, Winkelmann and Levermann, The Cryosphere (2019). If you make use of this code, please cite the respective paper.
+
+Code release `v1.0-paleo-ensemble <pism-paleo_>`_ was used for "Glacial cycles simulation of the Antarctic Ice Sheet with PISM" in Albrecht, Winkelmann and Levermann, The Cryosphere (2019). If you make use of this code, please cite the respective paper.
 
 This code release builds on a `previous release <pism-rebound_>`_ for a publication in Nature by Kingslake, Scherer, Albrecht et al., "Extensive retreat and re-advance of the West Antarctic Ice Sheet during the Holocene." Nature 558, no. 7710 (2018): 430.
 
@@ -53,6 +54,18 @@ Download and Install
 --------------------
 
 See the `Installing PISM <pism-installation_>`_ on ``pism-docs.org``.
+
+
+License
+--------------------
+
+PISM is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+
+PISM is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You find a copy of the GNU General Public License along with PISM in the file ``COPYING``;
+
+
 
 Contributing
 ------------
@@ -77,7 +90,8 @@ Want to contribute? Great! See `Committing to PISM <pism-contribute_>`_.
 .. _NASA-Cryosphere: http://ice.nasa.gov/
 .. _NSF-Polar: https://nsf.gov/geo/plr/about.jsp
 .. _pism-rebound: https://github.com/pism/pism/releases/tag/pik-holocene-gl-rebound
-
+.. _pism-paleo: https://github.com/talbrecht/pism_pik/releases/tag/v1.0-paleo-ensemble
+.. _borstad: https://doi.org/10.1002/2015GL067365
 ..
    Local Variables:
    fill-column: 90
