@@ -7,11 +7,13 @@ Ice Sheet using climate forcing over the last two glacial cycles.
 These scripts produce one selected simulation out of a parameter ensemble, which has been used as reference simulation in
 
 * T. Albrecht, R. Winkelmann and A. Levermann, 
-_Glacial cycles simulation of the Antarctic Ice Sheet with PISM – Part 1: Boundary conditions and climatic forcing_, https://www.the-cryosphere-discuss.net/tc-2019-71/
+_Glacial-cycle simulations of the Antarctic Ice Sheet with the Parallel Ice Sheet Model (PISM) – Part 1: Boundary conditions and climatic forcing_, **The Cryosphere**, 14, 599–632, <https://doi.org/10.5194/tc-14-599-2020>, 2020
+
 
 and 
 * T. Albrecht, R. Winkelmann and A. Levermann, 
-_Glacial cycles simulation of the Antarctic Ice Sheet with PISM – Part 2: Parameter ensemble analysis_, https://www.the-cryosphere-discuss.net/tc-2019-70/
+_Glacial-cycle simulations of the Antarctic Ice Sheet with the Parallel Ice Sheet Model (PISM) – Part 2: Parameter ensemble analysis_, **The Cryosphere**, 14, 633–656, <https://doi.org/10.5194/tc-14-633-2020>, 2020
+
 
 
 
